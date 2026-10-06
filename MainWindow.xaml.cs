@@ -37,25 +37,22 @@ public partial class MainWindow : Window
             Visibility = Visibility.Hidden;
         }
 
-        SourceInitialized += (_, _) =>
-        {
-            _trayService = new TrayService(
-                mainWindow: this,
-                toggleOverlayAction: () => _viewModel?.ToggleOverlay(),
-                explicitExitAction: () =>
-                {
-                    _isExplicitExit = true;
-                    Close();
-                }
-            );
-            _trayService.Initialize();
-
-            if (isStartup)
+        _trayService = new TrayService(
+            mainWindow: this,
+            toggleOverlayAction: () => _viewModel?.ToggleOverlay(),
+            explicitExitAction: () =>
             {
-                WindowState = WindowState.Minimized;
-                Hide();
+                _isExplicitExit = true;
+                Close();
             }
-        };
+        );
+        _trayService.Initialize();
+
+        if (isStartup)
+        {
+            WindowState = WindowState.Minimized;
+            Hide();
+        }
 
         _viewModel = new MainViewModel();
         DataContext = _viewModel;
