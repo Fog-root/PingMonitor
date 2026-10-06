@@ -421,10 +421,20 @@
                         <ColumnDefinition Width="Auto" SharedSizeGroup="GestureGroup"/>
                     </Grid.ColumnDefinitions>
 
-                    <ContentPresenter Grid.Column="0"
-                                      ContentSource="Icon"
-                                      Margin="0,0,8,0"
-                                      VerticalAlignment="Center"/>
+                    <Grid Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <ContentPresenter x:Name="IconPresenter" ContentSource="Icon"/>
+                        <Path x:Name="CheckMark"
+                              Data="M 1 4.5 L 4 7.5 L 10 1.5"
+                              Stroke="{DynamicResource AccentGreen}"
+                              StrokeThickness="1.8"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Width="11" Height="9"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Visibility="Collapsed"/>
+                    </Grid>
 
                     <ContentPresenter Grid.Column="1"
                                       ContentSource="Header"
@@ -443,6 +453,9 @@
                 </Grid>
             </Border>
             <ControlTemplate.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                </Trigger>
                 <Trigger Property="IsHighlighted" Value="True">
                     <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource BgCardHover}"/>
                     <Setter Property="Foreground" Value="#FFFFFF"/>

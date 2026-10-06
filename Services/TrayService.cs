@@ -173,29 +173,25 @@ public sealed class TrayService : IDisposable
         // 3. Автозагрузка Windows
         _startupMenuItem = new MenuItem
         {
-            Header = "🚀 Автозагрузка с Windows (Диспетчер задач)",
-            IsCheckable = true,
-            IsChecked = StartupService.IsStartupEnabled()
+            IsCheckable = true
         };
         _startupMenuItem.Click += (_, _) =>
         {
             bool newState = !StartupService.IsStartupEnabled();
             StartupService.SetStartupEnabled(newState);
-            _startupMenuItem.IsChecked = StartupService.IsStartupEnabled();
+            UpdateMenuItemsState();
         };
         menu.Items.Add(_startupMenuItem);
 
         // 4. Сворачивать в трей при закрытии
         _closeToTrayMenuItem = new MenuItem
         {
-            Header = "📥 Сворачивать в трей при закрытии [X]",
-            IsCheckable = true,
-            IsChecked = MinimizeToTrayOnClose
+            IsCheckable = true
         };
         _closeToTrayMenuItem.Click += (_, _) =>
         {
             MinimizeToTrayOnClose = !MinimizeToTrayOnClose;
-            _closeToTrayMenuItem.IsChecked = MinimizeToTrayOnClose;
+            UpdateMenuItemsState();
         };
         menu.Items.Add(_closeToTrayMenuItem);
 
@@ -212,6 +208,8 @@ public sealed class TrayService : IDisposable
 
         menu.Opened += (_, _) => UpdateMenuItemsState();
 
+        UpdateMenuItemsState();
+
         _contextMenu = menu;
     }
 
@@ -219,11 +217,18 @@ public sealed class TrayService : IDisposable
     {
         if (_startupMenuItem != null)
         {
-            _startupMenuItem.IsChecked = StartupService.IsStartupEnabled();
+            bool startup = StartupService.IsStartupEnabled();
+            _startupMenuItem.IsChecked = startup;
+            _startupMenuItem.Header = startup
+                ? "✅ Автозагрузка с Windows [ВКЛ]"
+                : "⚪ Автозагрузка с Windows [ВЫКЛ]";
         }
         if (_closeToTrayMenuItem != null)
         {
             _closeToTrayMenuItem.IsChecked = MinimizeToTrayOnClose;
+            _closeToTrayMenuItem.Header = MinimizeToTrayOnClose
+                ? "✅ Сворачивать в трей при закрытии [ВКЛ]"
+                : "⚪ Сворачивать в трей при закрытии [ВЫКЛ]";
         }
     }
 
