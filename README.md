@@ -18,6 +18,12 @@
   <img src="letter_p_transparent.png" alt="Ping Monitoring Logo" width="120" height="120" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/Fog-root/PingMonitor/releases/latest">
+    <img src="https://img.shields.io/badge/⬇️_Скачать_Ping_Monitoring-v1.0.0_(Windows)-22C55E?style=for-the-badge&logo=windows&logoColor=white" alt="Download Ping Monitoring" />
+  </a>
+</p>
+
 ---
 
 ## 📌 О проекте / Overview
@@ -104,8 +110,8 @@
 ### 1. Клонирование и запуск в режиме разработки:
 ```bash
 # Клонирование репозитория
-git clone https://github.com/username/PingMonitoring.git
-cd PingMonitoring
+git clone https://github.com/Fog-root/PingMonitor.git
+cd PingMonitor
 
 # Запуск приложения
 dotnet run
@@ -133,6 +139,16 @@ dotnet publish -c Release -o publish
 
 * **VAC & EAC Безопасность:** Приложение **не внедряет сторонние DLL** в адресное пространство игр и **не перехватывает память процессов**. Мониторинг полностью легитимен и безопасен для аккаунтов Steam, Epic Games и Riot.
 * **Приватность:** Все измерения хранятся локально в директории `%APPDATA%\DotaPingMonitor`. Приложение не отправляет пользовательские данные на сторонние серверы и не содержит телеметрии отслеживания.
+
+---
+
+## 💡 Идеи и Баги / Feedback & Community
+
+Нашли ошибку или хотите предложить новую функцию? Мы открыты к любым предложениям от игроков!
+
+* 🐛 **[Сообщить о баге или сбое](https://github.com/Fog-root/PingMonitor/issues/new?template=bug_report.yml)** — если оверлей перекрывается игрой, возникла ошибка запуска или некорректно работает MTR.
+* 💡 **[Предложить идею или игру](https://github.com/Fog-root/PingMonitor/issues/new?template=feature_request.yml)** — предложите новые игры, дата-центры, кастомизацию тем или функций HUD.
+* 📋 **[Все задачи и предложения (Issues)](https://github.com/Fog-root/PingMonitor/issues)** — просмотр текущих задач и статуса исправлений.
 
 ---
 

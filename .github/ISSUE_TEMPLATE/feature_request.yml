@@ -1,0 +1,51 @@
+name: "💡 Предложить идею / Feature Request"
+description: "Предложите новую функцию, игру, сервер или улучшение интерфейса"
+title: "[Idea]: "
+labels: ["enhancement", "idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### У вас есть идея, как сделать Ping Monitoring ещё удобнее? / Have an idea to make Ping Monitoring better?
+        Мы всегда открыты для предложений сообщества! Опишите вашу задумку ниже.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: "Категория предложения / Category"
+      options:
+        - "🎮 Новая игра / Новые серверы (Game or Servers)"
+        - "🖥️ HUD-Оверлей (Overlay feature / style)"
+        - "⚡ Диагностика и MTR (Diagnostics / Speedtest)"
+        - "🎨 Дизайн и темы интерфейса (UI / Theme)"
+        - "⌨️ Горячие клавиши и управление (Hotkeys / Controls)"
+        - "⚙️ Другое (Other)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea_summary
+    attributes:
+      label: "Суть идеи / Idea Summary"
+      description: "Кратко и понятно опишите, что вы предлагаете добавить или изменить"
+      placeholder: "Хотелось бы добавить мониторинг серверов для игры Apex Legends / возможность менять цвет шрифта в оверлее..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_needed
+    attributes:
+      label: "Чем это будет полезно? / Motivation"
+      description: "Как эта функция поможет игрокам и пользователям?"
+      placeholder: "Это позволит игрокам быстрее замечать скачки пинга в соревновательных матчах..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Примеры или концепты / Examples & Mockups"
+      description: "Ссылки, похожие реализации в других программах или макеты"
+      placeholder: "Например, как сделано в ... или скриншот идеи"
+    validations:
+      required: false

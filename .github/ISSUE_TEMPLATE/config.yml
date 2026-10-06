@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "💬 Обсуждения и вопросы сообщества (Discussions)"
+    url: "https://github.com/Fog-root/PingMonitor/discussions"
+    about: "Задайте вопрос, поделитесь мнением или пообщайтесь с другими пользователями"

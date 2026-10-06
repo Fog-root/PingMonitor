@@ -1,0 +1,70 @@
+name: "🐛 Сообщить о баге / Bug Report"
+description: "Сообщите об ошибке, сбое или проблеме в работе Ping Monitoring"
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Спасибо за помощь в улучшении Ping Monitoring! / Thank you for helping improve Ping Monitoring!
+        Пожалуйста, заполните форму ниже, чтобы мы могли быстрее найти и устранить проблему.
+
+  - type: dropdown
+    id: app_type
+    attributes:
+      label: "Версия приложения / Application Type"
+      description: "Какую версию вы используете?"
+      options:
+        - "Installer (Setup.exe)"
+        - "Portable (.exe)"
+        - "Сборка из исходников (Built from Source)"
+    validations:
+      required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: "Операционная система / Operating System"
+      description: "Какая у вас версия Windows?"
+      placeholder: "Например: Windows 11 23H2 (x64) или Windows 10 22H2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Описание проблемы / Problem Description"
+      description: "Что произошло? Опишите поведение программы подробнее."
+      placeholder: "При запуске оверлея в игре ... возникает ошибка / оверлей не отображается поверх окна ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: "Шаги для воспроизведения / Steps to Reproduce"
+      description: "Какие действия приводят к ошибке?"
+      placeholder: |
+        1. Запустил игру Dota 2 (или другую)
+        2. Нажал комбинацию клавиш Ctrl + Shift + O
+        3. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Ожидаемое поведение / Expected Behavior"
+      description: "Что должно было произойти вместо ошибки?"
+      placeholder: "Оверлей должен отображаться в левом верхнем углу..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_info
+    attributes:
+      label: "Скриншоты или логи / Screenshots or Additional Context"
+      description: "Прикрепите скриншот ошибки или текст сообщения"
+      placeholder: "Перетащите изображение сюда или вставьте текст ошибки"
+    validations:
+      required: false
