@@ -1,0 +1,193 @@
+<Window x:Class="DotaPingMonitor.Views.HotkeyRebindDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройка горячей клавиши"
+        Width="460" Height="270"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Focusable="True"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="DlgCanvas"         Color="#07080A"/>
+        <SolidColorBrush x:Key="DlgSurface"        Color="#0D0E12"/>
+        <SolidColorBrush x:Key="DlgCard"           Color="#111317"/>
+        <SolidColorBrush x:Key="DlgBorder"         Color="#22262C"/>
+        <SolidColorBrush x:Key="DlgBorderSubtle"   Color="#17191E"/>
+        <SolidColorBrush x:Key="DlgTextPrimary"    Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DlgTextSecondary"  Color="#9EA6B3"/>
+        <SolidColorBrush x:Key="DlgTextMuted"      Color="#606773"/>
+        <SolidColorBrush x:Key="DlgAccentGreen"    Color="#59D499"/>
+        <SolidColorBrush x:Key="DlgAccentBlue"     Color="#57C1FF"/>
+    </Window.Resources>
+
+    <!-- Основная плашка диалога с тенью и скруглением Raycast -->
+    <Border Background="{StaticResource DlgCanvas}"
+            BorderBrush="{StaticResource DlgBorder}"
+            BorderThickness="1"
+            CornerRadius="10"
+            Padding="0"
+            SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DynamicResource ResourceKey="MenuDropShadow"/>
+        </Border.Effect>
+
+        <Grid Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="*"/>    <!-- Hotkey Card -->
+                <RowDefinition Height="Auto"/> <!-- Actions -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. HEADER -->
+            <Grid Grid.Row="0" Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#1A57C1FF" CornerRadius="4" Padding="5,2" Margin="0,0,8,0">
+                            <TextBlock Text="⌨" Foreground="{StaticResource DlgAccentBlue}" FontSize="12" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Настройка горячей клавиши"
+                                   Foreground="{StaticResource DlgTextPrimary}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Имя настраиваемого действия -->
+                    <TextBlock x:Name="ActionNameText"
+                               Text="Включение / скрытие HUD-оверлея"
+                               Foreground="{StaticResource DlgAccentBlue}"
+                               FontSize="11"
+                               FontWeight="Medium"
+                               Margin="28,3,0,0"/>
+                </StackPanel>
+
+                <!-- Кнопка закрытия ✕ -->
+                <Button Grid.Column="1"
+                        Width="26" Height="26"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        Click="CancelBtn_Click"
+                        ToolTip="Закрыть (Esc)">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="5">
+                                <TextBlock Text="✕" Foreground="{StaticResource DlgTextMuted}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#1A1D25"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+
+            <!-- 2. HOTKEY RECORDER CARD -->
+            <Border Grid.Row="1"
+                    Background="{StaticResource DlgSurface}"
+                    BorderBrush="{StaticResource DlgBorderSubtle}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,10"
+                    Margin="0,0,0,14">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <!-- Большой блок с текущей нажимаемой комбинацией -->
+                    <Border x:Name="KeyBadgeBorder"
+                            Background="#090A0D"
+                            BorderBrush="{StaticResource DlgAccentBlue}"
+                            BorderThickness="1.5"
+                            CornerRadius="6"
+                            Padding="16,7"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,8">
+                        <TextBlock x:Name="KeyCombinationText"
+                                   Text="Ctrl+Shift+O"
+                                   FontFamily="Consolas, Segoe UI"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource DlgAccentGreen}"
+                                   HorizontalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Статус / подсказка -->
+                    <TextBlock x:Name="StatusHintText"
+                               Text="Нажмите желаемую комбинацию на клавиатуре..."
+                               Foreground="{StaticResource DlgTextSecondary}"
+                               FontSize="11"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,4"/>
+
+                    <TextBlock Text="Поддерживаются F1–F12, Space, Ins, Del, а также сочетания с Ctrl, Shift, Alt"
+                               Foreground="{StaticResource DlgTextMuted}"
+                               FontSize="10"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 3. ACTIONS FOOTER -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Кнопка сброса на дефолт -->
+                <Button Grid.Column="0"
+                        Content="↺ По умолчанию"
+                        ToolTip="Сбросить на стандартную комбинацию"
+                        Height="28"
+                        Padding="10,0"
+                        FontSize="11"
+                        Click="ResetDefaultBtn_Click"/>
+
+                <!-- Кнопка убрать бинд вовсе -->
+                <Button Grid.Column="1"
+                        x:Name="ClearBindingBtn"
+                        Content="✕ Убрать бинд"
+                        ToolTip="Отключить горячую клавишу (будет отображаться ...)"
+                        Height="28"
+                        Padding="10,0"
+                        FontSize="11"
+                        Margin="6,0,0,0"
+                        Click="ClearBindingBtn_Click"/>
+
+                <!-- Кнопка Отмена -->
+                <Button Grid.Column="3"
+                        Content="Отмена"
+                        Height="28"
+                        Padding="12,0"
+                        FontSize="11"
+                        Margin="0,0,8,0"
+                        Click="CancelBtn_Click"/>
+
+                <!-- Кнопка Сохранить -->
+                <Button Grid.Column="4"
+                        x:Name="SaveBtn"
+                        Content="✓ Применить"
+                        Height="28"
+                        Padding="14,0"
+                        FontSize="11"
+                        Background="#1A59D499"
+                        BorderBrush="{StaticResource DlgAccentGreen}"
+                        Foreground="{StaticResource DlgAccentGreen}"
+                        Click="SaveBtn_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

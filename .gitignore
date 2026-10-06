@@ -1,0 +1,53 @@
+## Build, Output and Staging Folders
+bin/
+obj/
+publish/
+publish_single/
+publish_standalone/
+installer_output/
+dist/
+out/
+build/
+.cache/
+node_modules/
+
+## Visual Studio / Rider / IDE files
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+## Runtime Databases, State, and Telemetry Data
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+speedtest_history.json
+overlay_config.json
+
+## System Traces, Logs and Environment
+*.etl
+*.log
+debug.log
+logs/
+crash.log
+.env
+.env.*
+!.env.example
+
+## Temporary / Scratch files and Archives
+scratch/
+*.zip
+*.bak
+*.tmp
+
+## OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

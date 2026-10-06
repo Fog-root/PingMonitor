@@ -1,0 +1,900 @@
+<Window x:Class="DotaPingMonitor.Views.HudOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ping Monitoring HUD"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        TextOptions.TextHintingMode="Fixed"
+        FontFamily="Segoe UI, Inter, -apple-system, sans-serif"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        MouseLeftButtonUp="Window_MouseLeftButtonUp"
+        MouseWheel="Window_MouseWheel">
+
+    <Window.Resources>
+        <!-- Raycast-styled контекстное меню для настройки масштаба и управления -->
+        <ContextMenu x:Key="OverlayContextMenu"
+                     Background="#111317"
+                     BorderBrush="#22262C"
+                     BorderThickness="1">
+            <MenuItem Header="Вид оверлея" Tag="layout_submenu">
+                <MenuItem Header="✓ Classic Bar (По умолчанию)" Click="PresetMenuItem_Click" Tag="classic_bar"/>
+                <MenuItem Header="  Ultra-Minimalist (Микро-режим)" Click="PresetMenuItem_Click" Tag="minimal"/>
+                <MenuItem Header="  Vertical Widget (Угловой стек)" Click="PresetMenuItem_Click" Tag="vertical_stack"/>
+                <MenuItem Header="  Pro Gamer (NetGraph телеметрия)" Click="PresetMenuItem_Click" Tag="net_graph"/>
+                <MenuItem Header="  Cyber HUD (Футуристичный)" Click="PresetMenuItem_Click" Tag="cyber_hud"/>
+            </MenuItem>
+            <MenuItem Header="Прозрачность" Tag="opacity_submenu">
+                <MenuItem Header="100% (Непрозрачный)" Click="OpacityPreset_Click" Tag="1.00"/>
+                <MenuItem Header="✓ 85% (Оптимальная)" Click="OpacityPreset_Click" Tag="0.85"/>
+                <MenuItem Header="75%" Click="OpacityPreset_Click" Tag="0.75"/>
+                <MenuItem Header="50% (Полупрозрачный)" Click="OpacityPreset_Click" Tag="0.50"/>
+                <MenuItem Header="25% (Призрачный)" Click="OpacityPreset_Click" Tag="0.25"/>
+                <Separator Background="#22262C"/>
+                <MenuItem StaysOpenOnClick="True">
+                    <MenuItem.Header>
+                        <StackPanel Orientation="Vertical" Width="140" Margin="2,2">
+                            <TextBlock Text="Прозрачность: 85%" Foreground="#A0A8B4" FontSize="11" Margin="0,0,0,3"/>
+                            <Slider Minimum="0.10" Maximum="1.00" SmallChange="0.05" LargeChange="0.10" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="0.85" ValueChanged="OpacitySlider_ValueChanged"/>
+                        </StackPanel>
+                    </MenuItem.Header>
+                </MenuItem>
+            </MenuItem>
+            <Separator Background="#22262C"/>
+            <MenuItem Header="Масштаб HUD" FontWeight="SemiBold" IsEnabled="False" Foreground="#7A8391" Tag="scale_header"/>
+            <MenuItem Header="75% (Компактный)" Click="ScalePreset_Click" Tag="0.75"/>
+            <MenuItem Header="90%" Click="ScalePreset_Click" Tag="0.90"/>
+            <MenuItem Header="100% (По умолчанию)" Click="ScalePreset_Click" Tag="1.00"/>
+            <MenuItem Header="115%" Click="ScalePreset_Click" Tag="1.15"/>
+            <MenuItem Header="130% (Увеличенный)" Click="ScalePreset_Click" Tag="1.30"/>
+            <MenuItem Header="150% (Большой / 2K)" Click="ScalePreset_Click" Tag="1.50"/>
+            <MenuItem Header="180% (4K мониторы)" Click="ScalePreset_Click" Tag="1.80"/>
+            <Separator Background="#22262C"/>
+            <MenuItem x:Name="MenuSparklineToggle" Header="✓ Кардиограмма (Sparkline)" Click="MenuSparklineToggle_Click" Tag="sparkline_toggle"/>
+            <MenuItem x:Name="MenuFpsToggle" Header="✓ Кадры в секунду (FPS)" Click="MenuFpsToggle_Click" InputGestureText="Ctrl+Shift+F" Tag="fps_toggle"/>
+            <MenuItem x:Name="MenuCpuToggle" Header="✓ Нагрузка ЦП (CPU)" Click="MenuCpuToggle_Click" InputGestureText="Ctrl+Shift+C" Tag="cpu_toggle"/>
+            <MenuItem x:Name="MenuGpuToggle" Header="✓ Нагрузка ГП (GPU)" Click="MenuGpuToggle_Click" InputGestureText="Ctrl+Shift+U" Tag="gpu_toggle"/>
+            <MenuItem x:Name="MenuRamToggle" Header="✓ Оперативная память (ОЗУ)" Click="MenuRamToggle_Click" InputGestureText="Ctrl+Shift+R" Tag="ram_toggle"/>
+            <MenuItem x:Name="MenuThemeSubmenu" Header="🎨 Тема оформления" Tag="theme_submenu">
+                <MenuItem Header="Linear Dark" Click="ThemeMenuItem_Click" Tag="Linear"/>
+                <MenuItem Header="Cyberpunk Neon" Click="ThemeMenuItem_Click" Tag="Cyberpunk"/>
+                <MenuItem Header="Emerald Matrix" Click="ThemeMenuItem_Click" Tag="Matrix"/>
+                <MenuItem Header="Blood Moon" Click="ThemeMenuItem_Click" Tag="BloodMoon"/>
+                <MenuItem Header="Nordic Frost" Click="ThemeMenuItem_Click" Tag="Nordic"/>
+                <MenuItem Header="Synthwave Sunset" Click="ThemeMenuItem_Click" Tag="Synthwave"/>
+                <MenuItem Header="Monochrome Cyber" Click="ThemeMenuItem_Click" Tag="MonochromeCyber"/>
+            </MenuItem>
+            <Separator Background="#22262C"/>
+            <MenuItem Header="⚡ Оптимизация интерфейса" Click="OptimizationToggle_Click" Tag="opt_toggle"/>
+            <Separator Background="#22262C"/>
+            <MenuItem x:Name="MenuLockToggle" Header="🔒 Зафиксировать (сквозные клики)" Click="ContextLock_Click" InputGestureText="Ctrl+Shift+L" Tag="lock_toggle"/>
+            <MenuItem x:Name="MenuCloseToggle" Header="✕ Скрыть оверлей" Click="ContextClose_Click" InputGestureText="Ctrl+Shift+O" Tag="close_toggle"/>
+        </ContextMenu>
+    </Window.Resources>
+
+    <Grid x:Name="RootContainer" Margin="2">
+        <!-- Векторное масштабирование окна оверлея без размытия шрифтов -->
+        <Grid.LayoutTransform>
+            <ScaleTransform x:Name="OverlayScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
+        </Grid.LayoutTransform>
+
+        <!-- Капсульный HUD оверлея с чистой hairline-границей без размытия и артефактов снизу -->
+        <Border x:Name="PillBorder"
+                Background="#F40D0E12"
+                BorderBrush="#2A2F38"
+                BorderThickness="1"
+                CornerRadius="16"
+                Padding="12,6,12,6"
+                Cursor="SizeAll"
+                ContextMenu="{StaticResource OverlayContextMenu}"
+                RenderOptions.ClearTypeHint="Enabled"
+                TextOptions.TextFormattingMode="Display"
+                TextOptions.TextRenderingMode="ClearType"
+                UseLayoutRounding="True"
+                SnapsToDevicePixels="True">
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                <!-- Пульсирующая статусная точка задержки -->
+                <Grid Width="10" Height="10" Margin="0,0,7,0" VerticalAlignment="Center">
+                    <Ellipse x:Name="StatusDotGlow"
+                             Width="10" Height="10"
+                             Fill="#1859D499"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"/>
+                    <Ellipse x:Name="StatusDot"
+                             Width="6" Height="6"
+                             Fill="#59D499"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Значение текущего ICMP пинга -->
+                <TextBlock x:Name="PingText"
+                           Text="-- ms"
+                           Foreground="#59D499"
+                           FontFamily="Segoe UI, Inter, sans-serif"
+                           FontSize="13.5"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           TextOptions.TextFormattingMode="Display"
+                           TextOptions.TextRenderingMode="ClearType"/>
+
+                <!-- Бейдж региона/сервера («FRA», «STO» и др., отображается только во время активного матча) -->
+                <Border x:Name="ClassicRegionBadge"
+                        Visibility="Collapsed"
+                        Background="#2059D499"
+                        BorderBrush="#3359D499"
+                        BorderThickness="1"
+                        CornerRadius="3.5"
+                        Padding="4,0,4,1"
+                        Margin="6,0,0,0"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="ClassicRegionText"
+                               Text="FRA"
+                               Foreground="#59D499"
+                               FontSize="9.5"
+                               FontWeight="Bold"
+                               FontFamily="Consolas, Segoe UI"/>
+                </Border>
+
+                <!-- Бейдж активного матча Dota 2 -->
+                <Border x:Name="HudMatchBadge"
+                        Visibility="Collapsed"
+                        Background="#2059D499"
+                        BorderBrush="#59D499"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="3,0,3,1"
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="HudMatchText"
+                               Text="STO2"
+                               Foreground="#59D499"
+                               FontSize="9"
+                               FontWeight="Bold"
+                               FontFamily="Consolas, Segoe UI"/>
+                </Border>
+
+                <!-- Бегущий мини-график (Sparkline / Кардиограмма сети за 35 сек) -->
+                <Border x:Name="SparklineBorder"
+                        Width="48" Height="15"
+                        Background="#0D0F13"
+                        BorderBrush="#252A33"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        ToolTip="Кардиограмма сети за последние 35 сек">
+                    <Grid ClipToBounds="True">
+                        <!-- Полупрозрачная градиентная заливка -->
+                        <Polygon x:Name="SparklineFill" StrokeThickness="0">
+                            <Polygon.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop x:Name="SparklineGradTop" Color="#2859D499" Offset="0"/>
+                                    <GradientStop x:Name="SparklineGradBottom" Color="#0059D499" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Polygon.Fill>
+                        </Polygon>
+
+                        <!-- Линия графика -->
+                        <Polyline x:Name="SparklineLine"
+                                  Stroke="#59D499"
+                                  StrokeThickness="1.2"
+                                  StrokeLineJoin="Round"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"/>
+
+                        <!-- Индикатор крайней точки (бегущий пульс) -->
+                        <Canvas x:Name="SparklineDotCanvas">
+                            <Ellipse x:Name="SparklineHeadDot"
+                                     Width="3" Height="3"
+                                     Fill="#59D499"
+                                     Visibility="Collapsed"/>
+                        </Canvas>
+                    </Grid>
+                </Border>
+
+                <!-- Тонкий волосяной разделитель перед FPS -->
+                <Rectangle x:Name="FpsDivider" Width="1" Height="13"
+                           Fill="#282D36"
+                           Margin="8,0"
+                           VerticalAlignment="Center"/>
+
+                <!-- Блок кадров в секунду (FPS) -->
+                <StackPanel x:Name="FpsPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="FpsBadgeBorder"
+                            Background="#18FFC533"
+                            CornerRadius="4"
+                            Padding="5,1.5"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="FpsBadgeText"
+                                   Text="FPS"
+                                   Foreground="#FFC533"
+                                   FontFamily="Segoe UI, Inter, sans-serif"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   TextOptions.TextFormattingMode="Display"
+                                   TextOptions.TextRenderingMode="ClearType"/>
+                    </Border>
+
+                    <TextBlock x:Name="FpsValueText"
+                               Text="--"
+                               Foreground="#FFFFFF"
+                               FontFamily="Segoe UI, Inter, sans-serif"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType"/>
+                </StackPanel>
+
+                <!-- Тонкий волосяной разделитель перед CPU -->
+                <Rectangle x:Name="CpuDivider" Width="1" Height="13"
+                           Fill="#282D36"
+                           Margin="8,0"
+                           VerticalAlignment="Center"/>
+
+                <!-- Блок нагрузки ЦП (CPU %) -->
+                <StackPanel x:Name="CpuPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="CpuBadgeBorder"
+                            Background="#184299E1"
+                            CornerRadius="4"
+                            Padding="5,1.5"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="CpuBadgeText"
+                                   Text="CPU"
+                                   Foreground="#4299E1"
+                                   FontFamily="Segoe UI, Inter, sans-serif"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   TextOptions.TextFormattingMode="Display"
+                                   TextOptions.TextRenderingMode="ClearType"/>
+                    </Border>
+
+                    <TextBlock x:Name="CpuValueText"
+                               Text="--%"
+                               Foreground="#FFFFFF"
+                               FontFamily="Segoe UI, Inter, sans-serif"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType"/>
+                </StackPanel>
+
+                <!-- Тонкий волосяной разделитель перед GPU -->
+                <Rectangle x:Name="GpuDivider" Width="1" Height="13"
+                           Fill="#282D36"
+                           Margin="8,0"
+                           VerticalAlignment="Center"/>
+
+                <!-- Блок нагрузки ГП (GPU %) -->
+                <StackPanel x:Name="GpuPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="GpuBadgeBorder"
+                            Background="#18BD93F9"
+                            CornerRadius="4"
+                            Padding="5,1.5"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="GpuBadgeText"
+                                   Text="GPU"
+                                   Foreground="#BD93F9"
+                                   FontFamily="Segoe UI, Inter, sans-serif"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   TextOptions.TextFormattingMode="Display"
+                                   TextOptions.TextRenderingMode="ClearType"/>
+                    </Border>
+
+                    <TextBlock x:Name="GpuValueText"
+                               Text="--%"
+                               Foreground="#FFFFFF"
+                               FontFamily="Segoe UI, Inter, sans-serif"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType"/>
+                </StackPanel>
+
+                <!-- Тонкий волосяной разделитель перед RAM -->
+                <Rectangle x:Name="RamDivider" Width="1" Height="13"
+                           Fill="#282D36"
+                           Margin="8,0"
+                           VerticalAlignment="Center"/>
+
+                <!-- Блок нагрузки ОЗУ (RAM %) -->
+                <StackPanel x:Name="RamPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="RamBadgeBorder"
+                            Background="#182DD4BF"
+                            CornerRadius="4"
+                            Padding="5,1.5"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="RamBadgeText"
+                                   Text="RAM"
+                                   Foreground="#2DD4BF"
+                                   FontFamily="Segoe UI, Inter, sans-serif"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   TextOptions.TextFormattingMode="Display"
+                                   TextOptions.TextRenderingMode="ClearType"/>
+                    </Border>
+
+                    <TextBlock x:Name="RamValueText"
+                               Text="--%"
+                               Foreground="#FFFFFF"
+                               FontFamily="Segoe UI, Inter, sans-serif"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType"/>
+                </StackPanel>
+
+                <!-- Кнопки управления (замок и закрытие) -->
+                <StackPanel x:Name="ControlsPanel"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="9,0,0,0">
+
+                    <!-- Кнопка фиксации (сквозные клики) с четкой векторной иконкой -->
+                    <Border x:Name="LockBtn"
+                            CornerRadius="4"
+                            Background="Transparent"
+                            Padding="3,2"
+                            Cursor="Hand"
+                            MouseLeftButtonDown="LockBtn_MouseLeftButtonDown"
+                            ToolTip="Закрепить оверлей (сквозные клики) • Хоткей: Ctrl+Shift+L">
+                        <Path x:Name="LockVectorIcon"
+                              Width="11" Height="12"
+                              Stretch="Uniform"
+                              Stroke="#8A92A0"
+                              StrokeThickness="1.2"
+                              Fill="Transparent"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              VerticalAlignment="Center"
+                              Data="M 3,5.5 V 4 C 3,2.2 4.3,1 6,1 C 7.7,1 9,2.2 9,4 M 10,5.5 H 2 C 1.4,5.5 1,5.9 1,6.5 V 11 C 1,11.6 1.4,12 2,12 H 10 C 10.6,12 11,11.6 11,11 V 6.5 C 11,5.9 10.6,5.5 10,5.5 Z"/>
+                    </Border>
+
+                    <!-- Кнопка скрытия оверлея с четкой векторной иконкой -->
+                    <Border x:Name="CloseBtn"
+                            CornerRadius="4"
+                            Background="Transparent"
+                            Padding="3,2"
+                            Margin="3,0,0,0"
+                            Cursor="Hand"
+                            MouseLeftButtonDown="CloseBtn_MouseLeftButtonDown"
+                            ToolTip="Скрыть оверлей • Хоткей: Ctrl+Shift+O">
+                        <Path x:Name="CloseVectorIcon" Width="9" Height="9"
+                              Stretch="Uniform"
+                              Stroke="#606773"
+                              StrokeThickness="1.3"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              VerticalAlignment="Center"
+                              Data="M 1,1 L 9,9 M 9,1 L 1,9"/>
+                    </Border>
+
+                    <!-- Тонкий разделитель перед ручкой ресайза -->
+                    <Rectangle x:Name="ResizeDivider"
+                               Width="1" Height="10"
+                               Fill="#282D36"
+                               Margin="4,0,3,0"
+                               VerticalAlignment="Center"/>
+
+                    <!-- Ручка изменения размера (Resize Grip) -->
+                    <Border x:Name="ResizeGrip"
+                            CornerRadius="3"
+                            Background="Transparent"
+                            Padding="2,3"
+                            Cursor="SizeNWSE"
+                            MouseLeftButtonDown="ResizeGrip_MouseLeftButtonDown"
+                            MouseMove="ResizeGrip_MouseMove"
+                            MouseLeftButtonUp="ResizeGrip_MouseLeftButtonUp"
+                            ToolTip="Потяните для изменения размера • Колесико мыши: масштаб">
+                        <Canvas Width="7" Height="11" VerticalAlignment="Center">
+                            <Ellipse Width="2" Height="2" Fill="#5A6270" Canvas.Left="4" Canvas.Top="1"/>
+                            <Ellipse Width="2" Height="2" Fill="#5A6270" Canvas.Left="1" Canvas.Top="4"/>
+                            <Ellipse Width="2" Height="2" Fill="#5A6270" Canvas.Left="4" Canvas.Top="4"/>
+                            <Ellipse Width="2" Height="2" Fill="#5A6270" Canvas.Left="1" Canvas.Top="7"/>
+                            <Ellipse Width="2" Height="2" Fill="#5A6270" Canvas.Left="4" Canvas.Top="7"/>
+                        </Canvas>
+                    </Border>
+
+                </StackPanel>
+
+            </StackPanel>
+
+        </Border>
+
+        <!-- ПРЕСЕТ 2: Ultra-Minimalist / Compact (Микро-режим) -->
+        <Border x:Name="MinimalBorder"
+                Visibility="Collapsed"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="6,3"
+                Cursor="SizeAll"
+                ContextMenu="{StaticResource OverlayContextMenu}"
+                RenderOptions.ClearTypeHint="Enabled"
+                TextOptions.TextFormattingMode="Display"
+                TextOptions.TextRenderingMode="ClearType"
+                UseLayoutRounding="True"
+                SnapsToDevicePixels="True">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock x:Name="MinimalPingText"
+                           Text="-- ms"
+                           Foreground="#59D499"
+                           FontSize="13.5"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI, Inter, sans-serif"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect x:Name="MinimalPingShadow" BlurRadius="5" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <!-- Бейдж региона сервера в Minimal (отображается только во время матча) -->
+                <Border x:Name="MinimalRegionBadge"
+                        Visibility="Collapsed"
+                        Background="#2059D499"
+                        BorderBrush="#3359D499"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="3.5,0,3.5,1"
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="MinimalRegionText"
+                               Text="FRA"
+                               Foreground="#59D499"
+                               FontSize="9"
+                               FontWeight="Bold"
+                               FontFamily="Consolas, Segoe UI"/>
+                </Border>
+
+                <TextBlock x:Name="MinimalDot1"
+                           Text=" • "
+                           Foreground="#8A92A0"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="MinimalFpsText"
+                           Text="-- FPS"
+                           Foreground="#FFC533"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI, Inter, sans-serif"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect x:Name="MinimalFpsShadow" BlurRadius="5" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="MinimalDot2"
+                           Text=" • "
+                           Foreground="#8A92A0"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="MinimalCpuText"
+                           Text="CPU --%"
+                           Foreground="#4299E1"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI, Inter, sans-serif"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect x:Name="MinimalCpuShadow" BlurRadius="5" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="MinimalDot3"
+                           Text=" • "
+                           Foreground="#8A92A0"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="MinimalGpuText"
+                           Text="GPU --%"
+                           Foreground="#BD93F9"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI, Inter, sans-serif"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect x:Name="MinimalGpuShadow" BlurRadius="5" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="MinimalDotRam"
+                           Text=" • "
+                           Foreground="#8A92A0"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="MinimalRamText"
+                           Text="RAM --%"
+                           Foreground="#2DD4BF"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI, Inter, sans-serif"
+                           VerticalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect x:Name="MinimalRamShadow" BlurRadius="5" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.95"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- ПРЕСЕТ 3: Vertical Widget / Corner Stack (Угловой стек) -->
+        <Border x:Name="VerticalStackBorder"
+                Visibility="Collapsed"
+                Background="#F40D0E12"
+                BorderBrush="#22262C"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="10,8,10,8"
+                MinWidth="132"
+                Cursor="SizeAll"
+                ContextMenu="{StaticResource OverlayContextMenu}"
+                RenderOptions.ClearTypeHint="Enabled"
+                TextOptions.TextFormattingMode="Display"
+                TextOptions.TextRenderingMode="ClearType"
+                UseLayoutRounding="True"
+                SnapsToDevicePixels="True">
+            <StackPanel Orientation="Vertical">
+                <!-- Строка 1: Пинг + палочки сигнала + кнопки -->
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Палочки сигнала сети -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                        <Rectangle x:Name="SigBar1" Width="3" Height="4" Margin="0,0,1.5,0" RadiusX="1" RadiusY="1" Fill="#59D499" VerticalAlignment="Bottom"/>
+                        <Rectangle x:Name="SigBar2" Width="3" Height="7" Margin="0,0,1.5,0" RadiusX="1" RadiusY="1" Fill="#59D499" VerticalAlignment="Bottom"/>
+                        <Rectangle x:Name="SigBar3" Width="3" Height="10" Margin="0,0,1.5,0" RadiusX="1" RadiusY="1" Fill="#59D499" VerticalAlignment="Bottom"/>
+                        <Rectangle x:Name="SigBar4" Width="3" Height="13" RadiusX="1" RadiusY="1" Fill="#59D499" VerticalAlignment="Bottom"/>
+                    </StackPanel>
+
+                    <!-- Значение пинга + Бейдж региона -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="VerticalPingText" Text="-- ms" Foreground="#59D499" FontSize="13.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Border x:Name="VerticalRegionBadge"
+                                Visibility="Collapsed"
+                                Background="#2059D499"
+                                BorderBrush="#3359D499"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="3,0,3,1"
+                                Margin="4,0,0,0"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="VerticalRegionText"
+                                       Text="FRA"
+                                       Foreground="#59D499"
+                                       FontSize="9"
+                                       FontWeight="Bold"
+                                       FontFamily="Consolas, Segoe UI"/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Мини-кнопки управления (Lock / Close) -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="16" Height="16" CornerRadius="3" Background="Transparent" Cursor="Hand" MouseLeftButtonDown="LockBtn_MouseLeftButtonDown" ToolTip="Зафиксировать / Сквозные клики" Margin="0,0,2,0">
+                            <Path x:Name="VerticalLockIcon" Width="9" Height="10" Stretch="Uniform" Stroke="#8A92A0" StrokeThickness="1.1" Fill="Transparent" Data="M 3,5.5 V 4 C 3,2.2 4.3,1 6,1 C 7.7,1 9,2.2 9,4 M 10,5.5 H 2 C 1.4,5.5 1,5.9 1,6.5 V 11 C 1,11.6 1.4,12 2,12 H 10 C 10.6,12 11,11.6 11,11 V 6.5 C 11,5.9 10.6,5.5 10,5.5 Z"/>
+                        </Border>
+                        <Border Width="16" Height="16" CornerRadius="3" Background="Transparent" Cursor="Hand" MouseLeftButtonDown="CloseBtn_MouseLeftButtonDown" ToolTip="Скрыть оверлей">
+                            <Path Width="7" Height="7" Stretch="Uniform" Stroke="#606773" StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M 1,1 L 9,9 M 9,1 L 1,9"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Строка 2: FPS -->
+                <Grid x:Name="VerticalFpsRow" Margin="0,0,0,5">
+                    <TextBlock Text="FPS" Foreground="#7A8391" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="VerticalFpsText" Text="--" Foreground="#FFC533" FontSize="12.5" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Строка 3: CPU + мини-прогрессбар -->
+                <StackPanel x:Name="VerticalCpuRow" Orientation="Vertical" Margin="0,0,0,5">
+                    <Grid Margin="0,0,0,2">
+                        <TextBlock Text="CPU" Foreground="#7A8391" FontSize="10" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="VerticalCpuText" Text="--%" Foreground="#FFFFFF" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Border Height="3" Background="#1F232B" CornerRadius="1.5">
+                        <Grid HorizontalAlignment="Left">
+                            <Border x:Name="VerticalCpuBar" Width="0" Height="3" Background="#4299E1" CornerRadius="1.5"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Строка 4: GPU + мини-прогрессбар -->
+                <StackPanel x:Name="VerticalGpuRow" Orientation="Vertical" Margin="0,0,0,5">
+                    <Grid Margin="0,0,0,2">
+                        <TextBlock Text="GPU" Foreground="#7A8391" FontSize="10" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="VerticalGpuText" Text="--%" Foreground="#FFFFFF" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Border Height="3" Background="#1F232B" CornerRadius="1.5">
+                        <Grid HorizontalAlignment="Left">
+                            <Border x:Name="VerticalGpuBar" Width="0" Height="3" Background="#BD93F9" CornerRadius="1.5"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Строка 5: RAM + мини-прогрессбар -->
+                <StackPanel x:Name="VerticalRamRow" Orientation="Vertical">
+                    <Grid Margin="0,0,0,2">
+                        <TextBlock Text="RAM" Foreground="#7A8391" FontSize="10" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="VerticalRamText" Text="--%" Foreground="#FFFFFF" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Border Height="3" Background="#1F232B" CornerRadius="1.5">
+                        <Grid HorizontalAlignment="Left">
+                            <Border x:Name="VerticalRamBar" Width="0" Height="3" Background="#2DD4BF" CornerRadius="1.5"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ПРЕСЕТ 4: Pro Gamer / Telemetry NetGraph (Сетевой акцент) -->
+        <Border x:Name="NetGraphBorder"
+                Visibility="Collapsed"
+                Background="#E607080A"
+                BorderBrush="#1F242C"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,6,10,6"
+                Cursor="SizeAll"
+                ContextMenu="{StaticResource OverlayContextMenu}"
+                RenderOptions.ClearTypeHint="Enabled"
+                TextOptions.TextFormattingMode="Display"
+                TextOptions.TextRenderingMode="ClearType"
+                UseLayoutRounding="True"
+                SnapsToDevicePixels="True">
+            <StackPanel Orientation="Vertical">
+                <!-- Верхняя строка: PING, LOSS, VAR, FPS и кнопки -->
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- REGION BADGE (отображается только во время матча) -->
+                        <Border x:Name="NetGraphRegionBadge"
+                                Visibility="Collapsed"
+                                Background="#2059D499"
+                                BorderBrush="#3359D499"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="3.5,0,3.5,1"
+                                Margin="0,0,6,0"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="NetGraphRegionText"
+                                       Text="FRA"
+                                       Foreground="#59D499"
+                                       FontSize="9"
+                                       FontWeight="Bold"
+                                       FontFamily="Consolas, Segoe UI"/>
+                        </Border>
+
+                        <!-- MATCH BADGE -->
+                        <Border x:Name="NetGraphMatchBadge"
+                                Visibility="Collapsed"
+                                Background="#2059D499"
+                                BorderBrush="#59D499"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="3,0,3,1"
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="NetGraphMatchText"
+                                       Text="STO2"
+                                       Foreground="#59D499"
+                                       FontSize="9"
+                                       FontWeight="Bold"
+                                       FontFamily="Consolas, Segoe UI"/>
+                        </Border>
+
+                        <!-- PING -->
+                        <TextBlock Text="PING:" Foreground="#606773" FontSize="10" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="NetGraphPingText" Text="-- ms" Foreground="#59D499" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas, Segoe UI" Margin="3,0,8,0" VerticalAlignment="Center"/>
+
+                        <!-- LOSS -->
+                        <TextBlock Text="LOSS:" Foreground="#606773" FontSize="10" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="NetGraphLossText" Text="0.0%" Foreground="#FFFFFF" FontSize="11" FontWeight="Bold" FontFamily="Consolas, Segoe UI" Margin="3,0,8,0" VerticalAlignment="Center"/>
+
+                        <!-- VAR (Jitter) -->
+                        <TextBlock Text="VAR:" Foreground="#606773" FontSize="10" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="NetGraphJitterText" Text="±0.0 ms" Foreground="#A0A8B4" FontSize="11" FontWeight="Bold" FontFamily="Consolas, Segoe UI" Margin="3,0,8,0" VerticalAlignment="Center"/>
+
+                        <!-- FPS -->
+                        <StackPanel x:Name="NetGraphFpsPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="FPS:" Foreground="#606773" FontSize="10" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="NetGraphFpsText" Text="--" Foreground="#FFC533" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas, Segoe UI" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Кнопки управления -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
+                        <Border Width="14" Height="14" Background="Transparent" Cursor="Hand" MouseLeftButtonDown="LockBtn_MouseLeftButtonDown" ToolTip="Зафиксировать / Сквозные клики" Margin="0,0,2,0">
+                            <Path x:Name="NetGraphLockIcon" Width="8" Height="9" Stretch="Uniform" Stroke="#8A92A0" StrokeThickness="1.1" Fill="Transparent" Data="M 3,5.5 V 4 C 3,2.2 4.3,1 6,1 C 7.7,1 9,2.2 9,4 M 10,5.5 H 2 C 1.4,5.5 1,5.9 1,6.5 V 11 C 1,11.6 1.4,12 2,12 H 10 C 10.6,12 11,11.6 11,11 V 6.5 C 11,5.9 10.6,5.5 10,5.5 Z"/>
+                        </Border>
+                        <Border Width="14" Height="14" Background="Transparent" Cursor="Hand" MouseLeftButtonDown="CloseBtn_MouseLeftButtonDown" ToolTip="Скрыть оверлей">
+                            <Path Width="7" Height="7" Stretch="Uniform" Stroke="#606773" StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M 1,1 L 9,9 M 9,1 L 1,9"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Расширенный спарклайн-график -->
+                <Border x:Name="NetGraphSparklineBorder"
+                        Height="22" Width="216"
+                        Background="#0A0C0F"
+                        BorderBrush="#1A1E24"
+                        BorderThickness="1"
+                        CornerRadius="2"
+                        Margin="0,0,0,4">
+                    <Grid ClipToBounds="True">
+                        <Polygon x:Name="NetGraphSparklineFill" StrokeThickness="0"/>
+                        <Polyline x:Name="NetGraphSparklineLine" Stroke="#59D499" StrokeThickness="1.2" StrokeLineJoin="Round"/>
+                    </Grid>
+                </Border>
+
+                <!-- Нижняя строка: CPU, GPU и RAM -->
+                <Grid>
+                    <StackPanel Orientation="Horizontal">
+                        <StackPanel x:Name="NetGraphCpuPanel" Orientation="Horizontal">
+                            <TextBlock Text="CPU:" Foreground="#606773" FontSize="10" FontWeight="Bold" FontFamily="Consolas, Segoe UI"/>
+                            <TextBlock x:Name="NetGraphCpuText" Text="--%" Foreground="#FFFFFF" FontSize="10.5" FontWeight="SemiBold" FontFamily="Consolas, Segoe UI" Margin="3,0,10,0"/>
+                        </StackPanel>
+
+                        <StackPanel x:Name="NetGraphGpuPanel" Orientation="Horizontal">
+                            <TextBlock Text="GPU:" Foreground="#606773" FontSize="10" FontWeight="Bold" FontFamily="Consolas, Segoe UI"/>
+                            <TextBlock x:Name="NetGraphGpuText" Text="--%" Foreground="#FFFFFF" FontSize="10.5" FontWeight="SemiBold" FontFamily="Consolas, Segoe UI" Margin="3,0,10,0"/>
+                        </StackPanel>
+
+                        <StackPanel x:Name="NetGraphRamPanel" Orientation="Horizontal">
+                            <TextBlock x:Name="NetGraphRamLabel" Text="RAM:" Foreground="#606773" FontSize="10" FontWeight="Bold" FontFamily="Consolas, Segoe UI"/>
+                            <TextBlock x:Name="NetGraphRamText" Text="--%" Foreground="#FFFFFF" FontSize="10.5" FontWeight="SemiBold" FontFamily="Consolas, Segoe UI" Margin="3,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ПРЕСЕТ 5: Cyber HUD / Glass Hexagon (Футуристичный стиль) -->
+        <Border x:Name="CyberHudBorder"
+                Visibility="Collapsed"
+                Background="#EA0A0D14"
+                BorderBrush="#5E6AD2"
+                BorderThickness="1.2"
+                CornerRadius="8"
+                Padding="8,5"
+                Cursor="SizeAll"
+                ContextMenu="{StaticResource OverlayContextMenu}"
+                RenderOptions.ClearTypeHint="Enabled"
+                TextOptions.TextFormattingMode="Display"
+                TextOptions.TextRenderingMode="ClearType"
+                UseLayoutRounding="True"
+                SnapsToDevicePixels="True">
+            <Border.Effect>
+                <DropShadowEffect x:Name="CyberHudShadow" BlurRadius="12" ShadowDepth="0" Color="#5E6AD2" Opacity="0.5"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Сегмент PING -->
+                <Border Background="#121622" BorderBrush="#252C3D" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="CyberPingDot" Width="6" Height="6" Fill="#59D499" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CyberPingText" Text="-- ms" Foreground="#59D499" FontSize="12" FontWeight="Bold" FontFamily="Segoe UI, Inter, sans-serif"/>
+                        <!-- REGION BADGE (отображается только во время матча) -->
+                        <Border x:Name="CyberRegionBadge"
+                                Visibility="Collapsed"
+                                Background="#2059D499"
+                                BorderBrush="#3359D499"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="3.5,0,3.5,1"
+                                Margin="5,0,0,0"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="CyberRegionText"
+                                       Text="FRA"
+                                       Foreground="#59D499"
+                                       FontSize="9"
+                                       FontWeight="Bold"
+                                       FontFamily="Consolas, Segoe UI"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Разделитель ячеек -->
+                <Rectangle x:Name="CyberFpsDivider" Width="1" Height="14" Fill="#303A4F" Margin="5,0"/>
+
+                <!-- Сегмент FPS -->
+                <Border x:Name="CyberFpsBorder" Background="#16171F" BorderBrush="#2F2B3F" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="FPS " Foreground="#FFC533" FontSize="9.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberFpsText" Text="--" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Разделитель ячеек -->
+                <Rectangle x:Name="CyberCpuDivider" Width="1" Height="14" Fill="#303A4F" Margin="5,0"/>
+
+                <!-- Сегмент CPU -->
+                <Border x:Name="CyberCpuBorder" Background="#121720" BorderBrush="#202A3C" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="CPU " Foreground="#4299E1" FontSize="9.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberCpuText" Text="--%" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Разделитель ячеек -->
+                <Rectangle x:Name="CyberGpuDivider" Width="1" Height="14" Fill="#303A4F" Margin="5,0"/>
+
+                <!-- Сегмент GPU -->
+                <Border x:Name="CyberGpuBorder" Background="#161424" BorderBrush="#2F2445" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="GPU " Foreground="#BD93F9" FontSize="9.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberGpuText" Text="--%" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Разделитель ячеек -->
+                <Rectangle x:Name="CyberRamDivider" Width="1" Height="14" Fill="#303A4F" Margin="5,0"/>
+
+                <!-- Сегмент RAM -->
+                <Border x:Name="CyberRamBorder" Background="#121820" BorderBrush="#1C2D35" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="RAM " Foreground="#2DD4BF" FontSize="9.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberRamText" Text="--%" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Кнопки управления -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
+                    <Border Width="16" Height="16" CornerRadius="3" Background="Transparent" Cursor="Hand" MouseLeftButtonDown="LockBtn_MouseLeftButtonDown" ToolTip="Зафиксировать / Сквозные клики" Margin="0,0,2,0">
+                        <Path x:Name="CyberLockIcon" Width="9" Height="10" Stretch="Uniform" Stroke="#8A92A0" StrokeThickness="1.1" Fill="Transparent" Data="M 3,5.5 V 4 C 3,2.2 4.3,1 6,1 C 7.7,1 9,2.2 9,4 M 10,5.5 H 2 C 1.4,5.5 1,5.9 1,6.5 V 11 C 1,11.6 1.4,12 2,12 H 10 C 10.6,12 11,11.6 11,11 V 6.5 C 11,5.9 10.6,5.5 10,5.5 Z"/>
+                    </Border>
+                    <Border Width="16" Height="16" CornerRadius="3" Background="Transparent" Cursor="Hand" MouseLeftButtonDown="CloseBtn_MouseLeftButtonDown" ToolTip="Скрыть оверлей">
+                        <Path Width="7" Height="7" Stretch="Uniform" Stroke="#606773" StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M 1,1 L 9,9 M 9,1 L 1,9"/>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

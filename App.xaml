@@ -1,0 +1,610 @@
+<Application x:Class="DotaPingMonitor.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+
+        <!-- ============ ЦВЕТОВАЯ ПАЛИТРА (LINEAR DARK THEME - ПО УМОЛЧАНИЮ) ============ -->
+
+        <SolidColorBrush x:Key="BgPrimary"          Color="#0B0C0E"/>
+        <SolidColorBrush x:Key="BgSurface"          Color="#101114"/>
+        <SolidColorBrush x:Key="BgCard"             Color="#121316"/>
+        <SolidColorBrush x:Key="BgCardElevated"     Color="#181A1F"/>
+        <SolidColorBrush x:Key="BgCardHover"        Color="#22252C"/>
+        <SolidColorBrush x:Key="BgInput"            Color="#0E0F12"/>
+        
+        <SolidColorBrush x:Key="BorderColor"        Color="#232730"/>
+        <SolidColorBrush x:Key="BorderSubtle"       Color="#181B22"/>
+        <SolidColorBrush x:Key="BorderHover"        Color="#383E4C"/>
+        
+        <SolidColorBrush x:Key="TextPrimary"        Color="#F7F8F8"/>
+        <SolidColorBrush x:Key="TextSecondary"      Color="#969CA6"/>
+        <SolidColorBrush x:Key="TextMuted"          Color="#5F6570"/>
+        
+        <SolidColorBrush x:Key="AccentGreen"        Color="#22C55E"/>
+        <SolidColorBrush x:Key="AccentGreenSoft"    Color="#2022C55E"/>
+        <SolidColorBrush x:Key="AccentYellow"       Color="#EAB308"/>
+        <SolidColorBrush x:Key="AccentYellowSoft"   Color="#20EAB308"/>
+        <SolidColorBrush x:Key="AccentRed"          Color="#EF4444"/>
+        <SolidColorBrush x:Key="AccentRedSoft"      Color="#20EF4444"/>
+        <SolidColorBrush x:Key="AccentBlue"         Color="#5E6AD2"/>
+        <SolidColorBrush x:Key="AccentBlueSoft"     Color="#265E6AD2"/>
+
+        <SolidColorBrush x:Key="AccentColorBrush"   Color="#5E6AD2"/>
+        <SolidColorBrush x:Key="AccentGlowBrush"    Color="#265E6AD2"/>
+        <Color x:Key="AccentColorValue">#5E6AD2</Color>
+
+        <!-- Радиальный блик фона темы (Ambient Mesh / Top Glow) -->
+        <RadialGradientBrush x:Key="ThemeAmbientRadialGlow" Center="0.5,0.0" GradientOrigin="0.5,0.0" RadiusX="0.65" RadiusY="0.45">
+            <GradientStop Color="#265E6AD2" Offset="0.0"/>
+            <GradientStop Color="#005E6AD2" Offset="1.0"/>
+        </RadialGradientBrush>
+
+        <!-- Верхний блик стеклянных карточек (Card Glass Top Shine) -->
+        <LinearGradientBrush x:Key="CardTopShineBrush" StartPoint="0.5,0.0" EndPoint="0.5,1.0">
+            <GradientStop Color="#185E6AD2" Offset="0.0"/>
+            <GradientStop Color="#005E6AD2" Offset="1.0"/>
+        </LinearGradientBrush>
+
+        <!-- Эффект неонового свечения элементов (Neon Bloom) -->
+        <DropShadowEffect x:Key="ThemeNeonBloom" BlurRadius="14" ShadowDepth="0" Color="#5E6AD2" Opacity="0.40"/>
+
+        <!-- Аккуратная микро-тень для карточек (Card Depth Elevation) -->
+        <DropShadowEffect x:Key="CardElevationShadow" BlurRadius="12" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.35"/>
+
+        <!-- Тень для всплывающих окон и контекстных меню (отключается в режиме оптимизации) -->
+        <DropShadowEffect x:Key="MenuDropShadow" BlurRadius="18" ShadowDepth="5" Direction="270" Color="#000000" Opacity="0.75"/>
+
+        <!-- ============ BUTTON ============ -->
+
+        <Style TargetType="Button">
+            <Setter Property="Background"      Value="{DynamicResource BgCardElevated}"/>
+            <Setter Property="Foreground"      Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush"     Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="14,7"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgCardHover}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#222733"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#444C58"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============ INTERVAL SEGMENT RADIO BUTTON ============ -->
+
+        <Style x:Key="IntervalRadioBtnStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="8,3"
+                                Margin="1,0">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#171A21"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#222834"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============ COMBOBOX TOGGLE BUTTON ============ -->
+
+        <ControlTemplate x:Key="ComboBoxToggleBtn" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="28"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Bd" Grid.ColumnSpan="2"
+                        Background="{DynamicResource BgInput}"
+                        BorderBrush="{DynamicResource BorderColor}"
+                        BorderThickness="1" CornerRadius="7"/>
+                <Path Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                      Data="M 0 0 L 4.5 4.5 L 9 0"
+                      Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderHover}"/>
+                    <Setter TargetName="Bd" Property="Background" Value="#0F1116"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBlue}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- ============ COMBOBOX ============ -->
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontSize"   Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Template="{StaticResource ComboBoxToggleBtn}"
+                                          Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay,
+                                              RelativeSource={RelativeSource TemplatedParent}}"/>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="12,3,28,3"
+                                              VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
+                            <Popup Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Grid MinWidth="{TemplateBinding ActualWidth}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border Background="{DynamicResource BgSurface}"
+                                            BorderBrush="{DynamicResource BorderHover}"
+                                            BorderThickness="1" CornerRadius="7" Margin="0,4,0,0">
+                                        <Border.Effect>
+                                            <DynamicResource ResourceKey="MenuDropShadow"/>
+                                        </Border.Effect>
+                                        <ScrollViewer Margin="4,6">
+                                            <StackPanel IsItemsHost="True"
+                                                        KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="Padding"    Value="10,7"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd" Background="Transparent"
+                                CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Stretch"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgCardHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1F2530"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============ LISTVIEW ============ -->
+
+        <Style TargetType="ListView">
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="Foreground"      Value="{StaticResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize"        Value="13"/>
+        </Style>
+
+        <Style TargetType="ListViewItem">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Margin"     Value="0,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="Bd" Background="Transparent"
+                                CornerRadius="5" Padding="6,3.5">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgCardHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1A202A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============ GRIDVIEW COLUMN HEADER ============ -->
+
+        <Style TargetType="GridViewColumnHeader">
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="Foreground"      Value="{DynamicResource TextMuted}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush"     Value="{DynamicResource BorderColor}"/>
+            <Setter Property="Padding"         Value="6,5"/>
+            <Setter Property="FontSize"        Value="10"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridViewColumnHeader">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============ SCROLLBAR (SLIM RAYCAST DARK) ============ -->
+
+        <Style x:Key="SbThumb" TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="T" CornerRadius="2.5"
+                                Background="#2A2F3A" Margin="1"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="T" Property="Background" Value="#4B5364"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SbPage" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <ControlTemplate x:Key="VertSb" TargetType="ScrollBar">
+            <Track x:Name="PART_Track" IsDirectionReversed="True" Width="5">
+                <Track.DecreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SbPage}" Command="ScrollBar.PageUpCommand"/>
+                </Track.DecreaseRepeatButton>
+                <Track.Thumb>
+                    <Thumb Style="{StaticResource SbThumb}"/>
+                </Track.Thumb>
+                <Track.IncreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SbPage}" Command="ScrollBar.PageDownCommand"/>
+                </Track.IncreaseRepeatButton>
+            </Track>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="HorizSb" TargetType="ScrollBar">
+            <Track x:Name="PART_Track" IsDirectionReversed="False" Height="5">
+                <Track.DecreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SbPage}" Command="ScrollBar.PageLeftCommand"/>
+                </Track.DecreaseRepeatButton>
+                <Track.Thumb>
+                    <Thumb Style="{StaticResource SbThumb}"/>
+                </Track.Thumb>
+                <Track.IncreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SbPage}" Command="ScrollBar.PageRightCommand"/>
+                </Track.IncreaseRepeatButton>
+            </Track>
+        </ControlTemplate>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels"   Value="True"/>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width"    Value="5"/>
+                    <Setter Property="Height"   Value="Auto"/>
+                    <Setter Property="Template" Value="{StaticResource VertSb}"/>
+                </Trigger>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Height"   Value="5"/>
+                    <Setter Property="Width"    Value="Auto"/>
+                    <Setter Property="Template" Value="{StaticResource HorizSb}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ============ TOOLTIP ============ -->
+
+        <Style TargetType="ToolTip">
+            <Setter Property="Background"      Value="#14171E"/>
+            <Setter Property="Foreground"      Value="#FFFFFF"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="8,5"/>
+            <Setter Property="FontSize"        Value="12"/>
+        </Style>
+
+        <!-- ============ CONTEXT MENU, MENU ITEM & SEPARATOR (RAYCAST DARK) ============ -->
+
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background"      Value="#111317"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="4"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DynamicResource ResourceKey="MenuDropShadow"/>
+                            </Border.Effect>
+                            <StackPanel IsItemsHost="True"
+                                        KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Обычный пункт контекстного меню (Leaf MenuItem) -->
+        <ControlTemplate x:Key="RaycastSubmenuItemTemplate" TargetType="{x:Type MenuItem}">
+            <Border x:Name="MenuItemBorder"
+                    Background="{TemplateBinding Background}"
+                    TextElement.Foreground="{TemplateBinding Foreground}"
+                    TextElement.FontSize="{TemplateBinding FontSize}"
+                    TextElement.FontFamily="{TemplateBinding FontFamily}"
+                    CornerRadius="5"
+                    Padding="{TemplateBinding Padding}"
+                    Margin="0,1"
+                    SnapsToDevicePixels="True">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="IconGroup"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="GestureGroup"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ContentPresenter Grid.Column="0"
+                                      ContentSource="Icon"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center"/>
+
+                    <ContentPresenter Grid.Column="1"
+                                      ContentSource="Header"
+                                      RecognizesAccessKey="True"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left"/>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{TemplateBinding InputGestureText}"
+                               Foreground="{DynamicResource TextMuted}"
+                               FontSize="11"
+                               FontFamily="Consolas, Segoe UI"
+                               Margin="20,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- Пункт контекстного меню с подменю (Submenu Header с выпадающим окном PART_Popup) -->
+        <ControlTemplate x:Key="RaycastSubmenuHeaderTemplate" TargetType="{x:Type MenuItem}">
+            <Border x:Name="MenuItemBorder"
+                    Background="{TemplateBinding Background}"
+                    TextElement.Foreground="{TemplateBinding Foreground}"
+                    TextElement.FontSize="{TemplateBinding FontSize}"
+                    TextElement.FontFamily="{TemplateBinding FontFamily}"
+                    CornerRadius="5"
+                    Padding="{TemplateBinding Padding}"
+                    Margin="0,1"
+                    SnapsToDevicePixels="True">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="IconGroup"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="GestureGroup"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ContentPresenter Grid.Column="0"
+                                      ContentSource="Icon"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center"/>
+
+                    <ContentPresenter Grid.Column="1"
+                                      ContentSource="Header"
+                                      RecognizesAccessKey="True"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left"/>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{TemplateBinding InputGestureText}"
+                               Foreground="{DynamicResource TextMuted}"
+                               FontSize="11"
+                               FontFamily="Consolas, Segoe UI"
+                               Margin="20,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"/>
+
+                    <!-- Индикатор наличия подменю (шеврон вправо) -->
+                    <Path x:Name="SubmenuArrow"
+                          Grid.Column="3"
+                          Data="M 0 0 L 4 3.5 L 0 7"
+                          Stroke="{DynamicResource TextMuted}"
+                          StrokeThickness="1.5"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"
+                          VerticalAlignment="Center"
+                          Margin="14,0,2,0"/>
+
+                    <!-- Всплывающее окно подменю (PART_Popup) -->
+                    <Popup x:Name="PART_Popup"
+                           AllowsTransparency="True"
+                           Placement="Right"
+                           VerticalOffset="-4"
+                           HorizontalOffset="2"
+                           IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                           Focusable="False"
+                           PopupAnimation="Fade">
+                        <Border Background="{DynamicResource BgSurface}"
+                                BorderBrush="{DynamicResource BorderColor}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="4"
+                                SnapsToDevicePixels="True"
+                                Grid.IsSharedSizeScope="True">
+                            <Border.Effect>
+                                <DynamicResource ResourceKey="MenuDropShadow"/>
+                            </Border.Effect>
+                            <ScrollViewer CanContentScroll="True"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel IsItemsHost="True"
+                                            KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                    <Setter TargetName="SubmenuArrow" Property="Stroke" Value="#FFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsSubmenuOpen" Value="True">
+                    <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                    <Setter TargetName="SubmenuArrow" Property="Stroke" Value="{DynamicResource AccentBlue}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                    <Setter TargetName="SubmenuArrow" Property="Stroke" Value="{DynamicResource TextMuted}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style TargetType="{x:Type MenuItem}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="Segoe UI, Inter, sans-serif"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template" Value="{StaticResource RaycastSubmenuItemTemplate}"/>
+            <Style.Triggers>
+                <Trigger Property="Role" Value="SubmenuHeader">
+                    <Setter Property="Template" Value="{StaticResource RaycastSubmenuHeaderTemplate}"/>
+                </Trigger>
+                <Trigger Property="HasItems" Value="True">
+                    <Setter Property="Template" Value="{StaticResource RaycastSubmenuHeaderTemplate}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Separator">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1"
+                                Background="{StaticResource BorderColor}"
+                                Margin="4,3"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ProgressBar">
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="Background" Value="#171A21"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="2" SnapsToDevicePixels="True">
+                            <Grid x:Name="TemplateRoot">
+                                <Border x:Name="PART_Track"/>
+                                <Border x:Name="PART_Indicator"
+                                        Background="{TemplateBinding Foreground}"
+                                        CornerRadius="2"
+                                        HorizontalAlignment="Left"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Application.Resources>
+</Application>
