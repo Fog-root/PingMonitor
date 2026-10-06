@@ -80,11 +80,19 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 ; Предложение запустить приложение сразу после завершения инсталляции
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[InstallDelete]
+; Удаление устаревших и конфликтующих ярлыков с предыдущих версий
+Type: files; Name: "{userdesktop}\DotaPingMonitor.lnk"
+Type: files; Name: "{commondesktop}\DotaPingMonitor.lnk"
+Type: files; Name: "{userprograms}\DotaPingMonitor.lnk"
+Type: files; Name: "{commonprograms}\DotaPingMonitor.lnk"
+
 [UninstallDelete]
 ; Очистка временных файлов и кэша при деинсталляции
 Type: filesandordirs; Name: "{app}\logs"
 Type: files; Name: "{app}\ping.db-shm"
 Type: files; Name: "{app}\ping.db-wal"
+Type: files; Name: "{userdesktop}\{#MyAppName}.lnk"
 
 [Code]
 var
