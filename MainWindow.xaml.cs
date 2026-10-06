@@ -118,6 +118,12 @@ public partial class MainWindow : Window
             {
                 e.Cancel = true;
                 Hide();
+                _trayService?.ShowNotification(
+                    "Ping Monitoring",
+                    LocalizationService.IsRussian
+                        ? "Приложение свернуто в трей. Оверлей и значок «P» снизу продолжают работать."
+                        : "Application minimized to tray. The overlay and 'P' icon continue running."
+                );
                 return;
             }
 
