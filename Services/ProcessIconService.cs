@@ -152,9 +152,11 @@ public class ProcessIconService
 
     private ImageSource? ResolveIcon(string safePath, string safeProc, int pid)
     {
-        // 1. Собственное приложение DotaPingMonitor
+        // 1. Собственное приложение PingMonitoring / DotaPingMonitor
         if (safeProc.Equals("DotaPingMonitor", StringComparison.OrdinalIgnoreCase) ||
-            safePath.Contains("DotaPingMonitor", StringComparison.OrdinalIgnoreCase))
+            safeProc.Equals("PingMonitoring", StringComparison.OrdinalIgnoreCase) ||
+            safePath.Contains("DotaPingMonitor", StringComparison.OrdinalIgnoreCase) ||
+            safePath.Contains("PingMonitoring", StringComparison.OrdinalIgnoreCase))
         {
             if (_appIcon.Value != null) return _appIcon.Value;
         }

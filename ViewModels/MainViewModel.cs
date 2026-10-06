@@ -1056,6 +1056,18 @@ public partial class MainViewModel : ObservableObject
         : LocalizationService.Get("OptimizationInactiveTooltip");
 
     // =========================================================
+    // STARTUP / RUN WITH WINDOWS
+    // =========================================================
+
+    [ObservableProperty]
+    private bool _isStartupEnabled = StartupService.IsStartupEnabled();
+
+    partial void OnIsStartupEnabledChanged(bool value)
+    {
+        StartupService.SetStartupEnabled(value);
+    }
+
+    // =========================================================
     // LOCALIZATION (i18n)
     // =========================================================
 

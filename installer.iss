@@ -6,7 +6,7 @@
 #define MyAppName "Ping Monitoring"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Ping Monitoring"
-#define MyAppExeName "DotaPingMonitor.exe"
+#define MyAppExeName "PingMonitoring.exe"
 #define MyAppAssocName MyAppName + " File"
 #define MyAppAssocExt ".pmon"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
@@ -34,7 +34,7 @@ SolidCompression=yes
 WizardStyle=modern
 WizardSizePercent=100
 CloseApplications=yes
-CloseApplicationsFilter=DotaPingMonitor.exe
+CloseApplicationsFilter=PingMonitoring.exe,DotaPingMonitor.exe
 RestartApplications=no
 DisableWelcomePage=no
 
@@ -71,6 +71,10 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFile
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; IconIndex: 0; WorkingDir: "{app}"; Tasks: desktopicon
 ; Ярлык в автозагрузке Windows (если выбран таск)
 Name: "{autostartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; IconIndex: 0; WorkingDir: "{app}"; Tasks: startupicon
+
+[Registry]
+; Регистрация в автозагрузке Windows (Диспетчер задач -> вкладка Автозагрузка)
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Ping Monitoring"; ValueData: """{app}\{#MyAppExeName}"" --startup"; Tasks: startupicon; Flags: uninsdeletevalue
 
 [Run]
 ; Предложение запустить приложение сразу после завершения инсталляции

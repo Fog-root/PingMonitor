@@ -23,10 +23,39 @@ public partial class MainWindow : Window
 
     private int CurrentWindowSize => Math.Max(10, _viewModel.ChartIntervalMinutes * 60);
     private readonly Action<bool> _onOptimizationModeChanged;
+    private TrayService? _trayService;
+    private bool _isExplicitExit;
 
     public MainWindow()
     {
         InitializeComponent();
+
+        bool isStartup = StartupService.IsStartupLaunch();
+        if (isStartup)
+        {
+            WindowState = WindowState.Minimized;
+            Visibility = Visibility.Hidden;
+        }
+
+        SourceInitialized += (_, _) =>
+        {
+            _trayService = new TrayService(
+                mainWindow: this,
+                toggleOverlayAction: () => _viewModel?.ToggleOverlay(),
+                explicitExitAction: () =>
+                {
+                    _isExplicitExit = true;
+                    Close();
+                }
+            );
+            _trayService.Initialize();
+
+            if (isStartup)
+            {
+                WindowState = WindowState.Minimized;
+                Hide();
+            }
+        };
 
         _viewModel = new MainViewModel();
         DataContext = _viewModel;
@@ -86,8 +115,16 @@ public partial class MainWindow : Window
         });
         LocalizationService.LanguageChanged += onLanguageChanged;
 
-        Closing += (_, _) =>
+        Closing += (sender, e) =>
         {
+            if (!_isExplicitExit && _trayService?.MinimizeToTrayOnClose == true)
+            {
+                e.Cancel = true;
+                Hide();
+                return;
+            }
+
+            _trayService?.Dispose();
             LocalizationService.LanguageChanged -= onLanguageChanged;
             ThemeService.ThemeChanged -= OnThemeChanged;
             ThemeService.OptimizationModeChanged -= _onOptimizationModeChanged;
@@ -440,6 +477,13 @@ public partial class MainWindow : Window
     {
         _allSessionRecords.Clear();
         _allSessionRecords.AddRange(records);
+
+        if (records.Count > 0)
+        {
+            var last = records[^1];
+            string pingText = last.IsTimeout ? "Таймаут" : $"{last.PingMs} ms";
+            _trayService?.UpdateTooltip($"Ping Monitoring — {pingText}");
+        }
 
         PulseStatusDot();
         UpdateChartDisplay();
