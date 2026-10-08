@@ -36,9 +36,9 @@
     </None>
   </ItemGroup>
 
-  <Target Name="SyncPublishOnBuild" AfterTargets="Build">
+  <Target Name="SyncPublishOnBuild" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' and '$(PublishProtocol)' == ''">
     <ItemGroup>
-      <_BuildOutputFiles Include="$(TargetDir)**\*.*" />
+      <_BuildOutputFiles Include="$(TargetDir)**\*.*" Exclude="$(TargetDir)win-x64\**;$(TargetDir)*.pdb" />
     </ItemGroup>
     <Copy SourceFiles="@(_BuildOutputFiles)" 
           DestinationFiles="@(_BuildOutputFiles->'$(MSBuildProjectDirectory)\publish\%(RecursiveDir)%(Filename)%(Extension)')" 
