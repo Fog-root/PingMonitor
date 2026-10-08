@@ -342,17 +342,17 @@
                 </Grid.RowDefinitions>
 
                 <!-- ВЕРХНИЙ РЯД: Логотип слева | Сервер, тема, Оптимизация и MTR справа -->
-                <Grid Grid.Row="0" ClipToBounds="True">
+                <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                 <!-- Меню разделов (3 полоски, гамбургер) + Логотип и заголовок -->
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
                             VerticalAlignment="Center"
-                            Margin="0,0,8,0">
+                            Margin="0,0,12,0">
 
                     <!-- Кнопка навигационного меню (3 полоски, гамбургер по дизайну пользователя) -->
                     <Border x:Name="NavMenuButton"
@@ -529,6 +529,55 @@
                                         </Border>
                                     </Grid>
                                 </Border>
+
+                                <!-- Разделитель секций -->
+                                <Border Height="1"
+                                        Background="{DynamicResource BorderSubtle}"
+                                        Margin="4,8,4,8"/>
+
+                                <!-- Секция настроек: Язык интерфейса -->
+                                <Grid Margin="8,2,8,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0"
+                                               Text="🌐"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,8,0"/>
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding LocLanguage}"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+
+                                    <!-- Segmented Toggle: RU | EN -->
+                                    <Border Grid.Column="2"
+                                            Background="{DynamicResource BgInput}"
+                                            BorderBrush="{DynamicResource BorderColor}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Height="26"
+                                            Padding="2"
+                                            VerticalAlignment="Center"
+                                            ToolTip="{Binding LocLanguageTooltip}">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border CornerRadius="4" Padding="7,2" Cursor="Hand" Background="{Binding LangRuBg}" MouseLeftButtonDown="LangRu_Click">
+                                                <TextBlock Text="RU" FontSize="10.5" FontWeight="{Binding LangRuFontWeight}" Foreground="{Binding LangRuFg}"/>
+                                            </Border>
+                                            <Border CornerRadius="4" Padding="7,2" Cursor="Hand" Background="{Binding LangEnBg}" MouseLeftButtonDown="LangEn_Click">
+                                                <TextBlock Text="EN" FontSize="10.5" FontWeight="{Binding LangEnFontWeight}" Foreground="{Binding LangEnFg}"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
                             </StackPanel>
                         </Border>
                     </Popup>
@@ -578,20 +627,26 @@
                                    TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
 
+                    <!-- Тонкий разделитель между брендингом и выбором игры -->
+                    <Border Width="1" Height="20"
+                            Background="{DynamicResource BorderSubtle}"
+                            Margin="12,0,12,0"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding DotaPingVisibility}"/>
+
                     <!-- Выпадающий селектор выбора игры (Linear Dark Dropdown) -->
                     <StackPanel Orientation="Horizontal"
                                 VerticalAlignment="Center"
-                                Margin="8,0,0,0"
                                 Visibility="{Binding DotaPingVisibility}">
                         <TextBlock Text="{Binding LocGame}"
                                    Foreground="{DynamicResource TextMuted}"
                                    FontSize="10"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
-                                   Margin="0,0,4,0"/>
+                                   Margin="0,0,5,0"/>
 
                         <ComboBox x:Name="GameCombo"
-                                  Width="155"
+                                  Width="135"
                                   Height="28"
                                   MaxDropDownHeight="360"
                                   ItemsSource="{Binding AvailableGames}"
@@ -603,11 +658,12 @@
                                         <TextBlock Text="{Binding IconGlyph}"
                                                    Foreground="{Binding IconBrush}"
                                                    FontFamily="Segoe UI Symbol, Segoe UI Emoji, Segoe UI, sans-serif"
-                                                   FontSize="12.5"
+                                                   FontSize="12"
                                                    Margin="0,0,6,0"
                                                    VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding DisplayName}"
-                                                   FontSize="11"
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
@@ -625,26 +681,6 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding DotaPingVisibility}">
 
-                    <!-- Переключатель языка (Segmented Toggle: RU | EN) -->
-                    <Border Background="{DynamicResource BgInput}"
-                            BorderBrush="{DynamicResource BorderColor}"
-                            BorderThickness="1"
-                            CornerRadius="6"
-                            Height="28"
-                            Padding="2"
-                            Margin="0,0,8,0"
-                            VerticalAlignment="Center"
-                            ToolTip="{Binding LocLanguageTooltip}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border CornerRadius="4" Padding="6,2" Cursor="Hand" Background="{Binding LangRuBg}" MouseLeftButtonDown="LangRu_Click">
-                                <TextBlock Text="RU" FontSize="10.5" FontWeight="{Binding LangRuFontWeight}" Foreground="{Binding LangRuFg}"/>
-                            </Border>
-                            <Border CornerRadius="4" Padding="6,2" Cursor="Hand" Background="{Binding LangEnBg}" MouseLeftButtonDown="LangEn_Click">
-                                <TextBlock Text="EN" FontSize="10.5" FontWeight="{Binding LangEnFontWeight}" Foreground="{Binding LangEnFg}"/>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
                     <!-- Селектор сервера, темы, Оптимизация и MTR -->
                     <TextBlock Text="{Binding LocServer}"
                                Foreground="{DynamicResource TextMuted}"
@@ -661,7 +697,21 @@
                               DropDownOpened="ServerCombo_DropDownOpened">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid VerticalAlignment="Center">
+                                <Grid VerticalAlignment="Center"
+                                      Background="Transparent"
+                                      ContextMenuOpening="ServerItem_ContextMenuOpening">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                                     Background="#111317" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+                                            <MenuItem Header="{Binding DeleteTooltip}"
+                                                      Foreground="{DynamicResource AccentRed}"
+                                                      Click="DeleteCustomServerMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="✕" Foreground="{DynamicResource AccentRed}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -687,8 +737,8 @@
                                                    Margin="0,0,6,0"/>
                                         <!-- 3 вертикальные полоски уровня сигнала -->
                                         <StackPanel Orientation="Horizontal"
-                                                     VerticalAlignment="Bottom"
-                                                     Height="13">
+                                                      VerticalAlignment="Bottom"
+                                                      Height="13">
                                             <!-- Полоска 1: низкая -->
                                             <Border Width="3" Height="4.5"
                                                     CornerRadius="1"
@@ -712,18 +762,49 @@
                                         </StackPanel>
 
                                         <!-- Кнопка удаления пользовательского сервера -->
-                                        <Button Width="16" Height="16"
+                                        <Button x:Name="DeleteServerItemBtn"
+                                                Width="18" Height="18"
                                                 Margin="6,0,0,0"
                                                 Padding="0"
                                                 Background="Transparent"
                                                 BorderBrush="Transparent"
                                                 Foreground="{DynamicResource AccentRed}"
-                                                Command="{Binding DataContext.DeleteCustomServerCommand, RelativeSource={RelativeSource AncestorType=ComboBox}}"
-                                                CommandParameter="{Binding}"
+                                                PreviewMouseLeftButtonDown="DeleteCustomServerItem_PreviewMouseLeftButtonDown"
+                                                Click="DeleteCustomServerItem_Click"
                                                 Visibility="{Binding IsCustom, Converter={StaticResource BoolToVisConverter}}"
-                                                ToolTip="{Binding DataContext.LocDeleteCustomServerTooltip, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                ToolTip="{Binding DeleteTooltip}"
                                                 Cursor="Hand">
-                                            <TextBlock Text="✕" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="Bd"
+                                                                        Background="{TemplateBinding Background}"
+                                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                                        CornerRadius="4">
+                                                                    <TextBlock Text="✕"
+                                                                               Foreground="{TemplateBinding Foreground}"
+                                                                               FontSize="9.5"
+                                                                               FontWeight="Bold"
+                                                                               HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="#25FF6161"/>
+                                                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentRed}"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
                                         </Button>
                                     </StackPanel>
                                 </Grid>
@@ -743,6 +824,22 @@
                             ToolTip="{Binding LocAddCustomServerTooltip}"
                             Cursor="Hand">
                         <TextBlock Text="+" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+
+                    <!-- Кнопка удаления выбранного пользовательского сервера (✕) -->
+                    <Button x:Name="DeleteCustomServerBtn"
+                            Width="26" Height="28"
+                            Margin="3,0,0,0"
+                            Padding="0"
+                            Background="{DynamicResource BgCardElevated}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Foreground="{DynamicResource AccentRed}"
+                            Command="{Binding DeleteCustomServerCommand}"
+                            CommandParameter="{Binding SelectedPingTarget}"
+                            Visibility="{Binding IsCustomTargetSelected, Converter={StaticResource BoolToVisConverter}}"
+                            ToolTip="{Binding LocDeleteCustomServerTooltip}"
+                            Cursor="Hand">
+                        <TextBlock Text="✕" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
 
                     <!-- Выбор темы оформления -->
@@ -815,6 +912,23 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Кнопка Отчёт для техподдержки (ISP Ticket Export) -->
+                    <Button x:Name="IspTicketBtn"
+                            Height="28"
+                            Padding="6,0"
+                            Margin="5,0,0,0"
+                            Background="{DynamicResource BgCardElevated}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Foreground="#57C1FF"
+                            Command="{Binding OpenIspTicketExportCommand}"
+                            ToolTip="{Binding LocIspTicketTooltip}"
+                            Cursor="Hand">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📋 " FontSize="11"/>
+                            <TextBlock Text="{Binding LocIspTicketButton}" FontSize="11" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Кнопка Авто-катка Dota 2 (отображается только для Dota 2) -->
                     <Button x:Name="AutoMatchBtn"
                             Height="28"
@@ -828,9 +942,9 @@
                             ToolTip="{Binding LocDotaAutoMatchTooltip}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="{Binding AutoMatchButtonText}"
-                                       Foreground="{Binding AutoMatchButtonForeground}"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"/>
+                                        Foreground="{Binding AutoMatchButtonForeground}"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
 
@@ -859,26 +973,6 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Visibility="{Binding TaskManagerVisibility}">
-
-                    <!-- Переключатель языка (Segmented Toggle: RU | EN) -->
-                    <Border Background="{DynamicResource BgInput}"
-                            BorderBrush="{DynamicResource BorderColor}"
-                            BorderThickness="1"
-                            CornerRadius="6"
-                            Height="28"
-                            Padding="2"
-                            Margin="0,0,10,0"
-                            VerticalAlignment="Center"
-                            ToolTip="{Binding LocLanguageTooltip}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border CornerRadius="4" Padding="6,2" Cursor="Hand" Background="{Binding LangRuBg}" MouseLeftButtonDown="LangRu_Click">
-                                <TextBlock Text="RU" FontSize="10.5" FontWeight="{Binding LangRuFontWeight}" Foreground="{Binding LangRuFg}"/>
-                            </Border>
-                            <Border CornerRadius="4" Padding="6,2" Cursor="Hand" Background="{Binding LangEnBg}" MouseLeftButtonDown="LangEn_Click">
-                                <TextBlock Text="EN" FontSize="10.5" FontWeight="{Binding LangEnFontWeight}" Foreground="{Binding LangEnFg}"/>
-                            </Border>
-                        </StackPanel>
-                    </Border>
 
                     <!-- Поиск процессов -->
                     <Border Background="{DynamicResource BgInput}"
@@ -971,10 +1065,7 @@
                             Padding="10,0"
                             Command="{Binding RefreshTaskManagerCommand}"
                             ToolTip="{Binding LocRefreshTmTooltip}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="↻ " FontSize="12" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding LocRefresh}" FontSize="11" FontWeight="SemiBold"/>
-                        </StackPanel>
+                        <TextBlock Text="{Binding LocRefresh}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </Button>
 
                 </StackPanel>
@@ -985,26 +1076,6 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Visibility="{Binding SpeedtestVisibility}">
-
-                    <!-- Переключатель языка (Segmented Toggle: RU | EN) -->
-                    <Border Background="{DynamicResource BgInput}"
-                            BorderBrush="{DynamicResource BorderColor}"
-                            BorderThickness="1"
-                            CornerRadius="6"
-                            Height="28"
-                            Padding="2"
-                            Margin="0,0,10,0"
-                            VerticalAlignment="Center"
-                            ToolTip="{Binding LocLanguageTooltip}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border CornerRadius="4" Padding="6,2" Cursor="Hand" Background="{Binding LangRuBg}" MouseLeftButtonDown="LangRu_Click">
-                                <TextBlock Text="RU" FontSize="10.5" FontWeight="{Binding LangRuFontWeight}" Foreground="{Binding LangRuFg}"/>
-                            </Border>
-                            <Border CornerRadius="4" Padding="6,2" Cursor="Hand" Background="{Binding LangEnBg}" MouseLeftButtonDown="LangEn_Click">
-                                <TextBlock Text="EN" FontSize="10.5" FontWeight="{Binding LangEnFontWeight}" Foreground="{Binding LangEnFg}"/>
-                            </Border>
-                        </StackPanel>
-                    </Border>
 
                     <!-- Выбор темы оформления -->
                     <TextBlock Text="{Binding LocTheme}"
@@ -2194,43 +2265,91 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Кнопка анализа узлов (MTR) -->
-                                <Button x:Name="ChartInfoDiagnosticsBtn"
-                                        Grid.Row="3"
-                                        Height="22"
-                                        Padding="4,0"
-                                        Cursor="Hand"
-                                        Click="ChartInfoDiagnosticsBtn_Click">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="Bd"
-                                                    Background="#1257C1FF"
-                                                    BorderBrush="#3057C1FF"
-                                                    BorderThickness="1"
-                                                    CornerRadius="4"
-                                                    Padding="4,1">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="#2257C1FF"/>
-                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#6057C1FF"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="#3057C1FF"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <TextBlock Text="🔍 " FontSize="9" Foreground="{DynamicResource AccentBlue}"/>
-                                        <TextBlock x:Name="ChartInfoActionText"
-                                                   Text="{Binding LocAnalyze}"
-                                                   Foreground="{DynamicResource AccentBlue}"
-                                                   FontSize="9.5"
-                                                   FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
+                                <!-- Кнопки анализа узлов (MTR) и тикета техподдержки -->
+                                <Grid Grid.Row="3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Кнопка анализа узлов (MTR) -->
+                                    <Button x:Name="ChartInfoDiagnosticsBtn"
+                                            Grid.Column="0"
+                                            Height="22"
+                                            Padding="3,0"
+                                            Margin="0,0,2,0"
+                                            Cursor="Hand"
+                                            Click="ChartInfoDiagnosticsBtn_Click">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Bd"
+                                                        Background="#1257C1FF"
+                                                        BorderBrush="#3057C1FF"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="2,1">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#2257C1FF"/>
+                                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#6057C1FF"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#3057C1FF"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="🔍 " FontSize="8.5" Foreground="{DynamicResource AccentBlue}"/>
+                                            <TextBlock x:Name="ChartInfoActionText"
+                                                       Text="{Binding LocAnalyze}"
+                                                       Foreground="{DynamicResource AccentBlue}"
+                                                       FontSize="8.5"
+                                                       FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Кнопка тикета для провайдера -->
+                                    <Button x:Name="ChartInfoIspTicketBtn"
+                                            Grid.Column="1"
+                                            Height="22"
+                                            Padding="3,0"
+                                            Margin="2,0,0,0"
+                                            Cursor="Hand"
+                                            Command="{Binding OpenIspTicketExportCommand}"
+                                            ToolTip="{Binding LocIspTicketTooltip}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Bd"
+                                                        Background="#1259D499"
+                                                        BorderBrush="#3059D499"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="2,1">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#2259D499"/>
+                                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#6059D499"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#3059D499"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="📋 " FontSize="8.5" Foreground="#59D499"/>
+                                            <TextBlock Text="Тикет"
+                                                       Foreground="#59D499"
+                                                       FontSize="8.5"
+                                                       FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
                             </Grid>
                         </Border>
 

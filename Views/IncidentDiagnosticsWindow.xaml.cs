@@ -64,6 +64,8 @@ public partial class IncidentDiagnosticsWindow : Window
         Seg3Title.Text = isRu ? "3. МАГИСТРАЛЬНЫЙ ТРАНЗИТ / СЕРВЕР" : "3. TRANSIT BACKBONE / SERVER";
         RunMtrBtnText.Text = isRu ? "Подробная MTR трассировка всех узлов" : "Detailed MTR trace of all nodes";
         RunMtrButton.ToolTip = isRu ? "Запустить пошаговый опрос каждого узла на пути следования пакетов" : "Run step-by-step trace of every node along the packet route";
+        IspTicketBtnText.Text = isRu ? "Тикет для техподдержки" : "ISP Support Ticket";
+        IspTicketButton.ToolTip = isRu ? "Сформировать готовое обращение для техподдержки провайдера" : "Generate ready support ticket for ISP";
         DismissBtnText.Text = isRu ? "Закрыть" : "Close";
     }
 
@@ -88,6 +90,35 @@ public partial class IncidentDiagnosticsWindow : Window
         };
         Close();
         mtrWin.ShowDialog();
+    }
+
+    private async void IspTicketButton_Click(object sender, RoutedEventArgs e)
+    {
+        IspTicketButton.IsEnabled = false;
+        try
+        {
+            var data = await IspTicketService.GatherDiagnosticDataAsync(
+                null,
+                new List<PingRecord> { _record },
+                _targetName,
+                _targetHost,
+                null
+            );
+
+            var win = new IspTicketExportWindow(data)
+            {
+                Owner = this.Owner ?? this
+            };
+            win.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            IspTicketButton.IsEnabled = true;
+        }
     }
 
     private async Task LoadDiagnosticsAsync()

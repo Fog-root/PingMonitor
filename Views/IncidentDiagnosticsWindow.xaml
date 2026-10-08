@@ -319,6 +319,24 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Сформировать тикет для техподдержки -->
+                    <Button x:Name="IspTicketButton"
+                            DockPanel.Dock="Left"
+                            Background="#1857C1FF"
+                            BorderBrush="#3357C1FF"
+                            BorderThickness="1"
+                            Foreground="#57C1FF"
+                            Padding="12,6"
+                            Margin="8,0,0,0"
+                            Cursor="Hand"
+                            Click="IspTicketButton_Click"
+                            ToolTip="Сформировать готовое обращение для техподдержки провайдера">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📋 " FontSize="12"/>
+                            <TextBlock x:Name="IspTicketBtnText" Text="Тикет для техподдержки" FontSize="11.5" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="DismissButton"
                             DockPanel.Dock="Right"
                             Background="#181B21"

@@ -251,6 +251,19 @@
                                VerticalAlignment="Center" DockPanel.Dock="Left"/>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                        <!-- Кнопка формирования тикета для провайдера -->
+                        <Button x:Name="IspTicketButton"
+                                Background="#1857C1FF" Foreground="#57C1FF"
+                                BorderBrush="#3357C1FF" BorderThickness="1"
+                                Padding="12,6" Margin="0,0,8,0"
+                                Cursor="Hand" Click="IspTicketButton_Click"
+                                ToolTip="Сформировать готовое вежливое обращение и технический отчёт для техподдержки">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📄 " FontSize="11"/>
+                                <TextBlock x:Name="IspTicketBtnText" Text="Тикет для провайдера" FontSize="11" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+
                         <!-- Кнопка копирования отчёта -->
                         <Button x:Name="CopyReportButton"
                                 Background="#121418" Foreground="#A0A8B4"

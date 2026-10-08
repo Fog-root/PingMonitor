@@ -19,6 +19,10 @@ public static class LocalizationService
 
         ["MtrDiagnostics"] = "MTR Диагностика",
         ["MtrDiagnosticsTooltip"] = "Трассировка сетевых узлов (MTR) • Определение источника потерь: роутер, провайдер или магистраль",
+        ["IspTicketButton"] = "Отчёт для техподдержки",
+        ["IspTicketTooltip"] = "Сформировать готовое вежливое обращение и технический отчёт для службы техподдержки интернет-провайдера",
+        ["NavIspTicketTitle"] = "Отчёт для техподдержки",
+        ["NavIspTicketDesc"] = "Сформировать готовый тикет для провайдера (MTR, логи)",
 
         ["NavSections"] = "РАЗДЕЛЫ ПРИЛОЖЕНИЯ",
         ["NavPingDesc"] = "Телеметрия сети, SDR, график",
@@ -227,6 +231,10 @@ public static class LocalizationService
 
         ["MtrDiagnostics"] = "MTR Diagnostics",
         ["MtrDiagnosticsTooltip"] = "Network route tracing (MTR) • Identify loss sources: router, ISP, or backbone",
+        ["IspTicketButton"] = "ISP Support Ticket",
+        ["IspTicketTooltip"] = "Generate a complete technical support ticket and route diagnostics for your Internet Service Provider",
+        ["NavIspTicketTitle"] = "ISP Support Ticket",
+        ["NavIspTicketDesc"] = "Generate support ticket for provider (MTR, logs)",
 
         ["NavSections"] = "APP SECTIONS",
         ["NavPingDesc"] = "Network telemetry, SDR, graph",

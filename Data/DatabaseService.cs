@@ -173,6 +173,32 @@ public class DatabaseService
         }).ConfigureAwait(false);
     }
 
+    public async Task<List<PingRecord>> GetRecentIncidentsAsync(int count = 20)
+    {
+        return await Task.Run(() =>
+        {
+            var list = new List<PingRecord>();
+            using var con = new SqliteConnection(ConnectionString);
+            con.Open();
+            using var cmd = con.CreateCommand();
+            cmd.CommandText = @"
+                SELECT Id, Timestamp, PingMs, IsSpike, IsTimeout, Server, RouterPingMs, IspPingMs, RouterIp, IspIp, IncidentCategory, IncidentDescription
+                FROM PingRecords
+                WHERE IsSpike = 1 OR IsTimeout = 1
+                ORDER BY Timestamp DESC
+                LIMIT @count;
+            ";
+            cmd.Parameters.AddWithValue("@count", count);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(ReadPingRecord(reader));
+            }
+            return list;
+        }).ConfigureAwait(false);
+    }
+
     public async Task<List<PingRecord>> GetAllAsync()
     {
         return await Task.Run(() =>
@@ -339,6 +365,20 @@ public class DatabaseService
             using var cmd = con.CreateCommand();
             cmd.CommandText = "DELETE FROM CustomTargets WHERE Id = @id;";
             cmd.Parameters.AddWithValue("@id", id);
+            return cmd.ExecuteNonQuery() > 0;
+        }).ConfigureAwait(false);
+    }
+
+    public async Task<bool> DeleteCustomTargetByNameAndGameAsync(string name, string gameId)
+    {
+        return await Task.Run(() =>
+        {
+            using var con = new SqliteConnection(ConnectionString);
+            con.Open();
+            using var cmd = con.CreateCommand();
+            cmd.CommandText = "DELETE FROM CustomTargets WHERE Name = @name AND (GameId = @gid OR GameId = 'all');";
+            cmd.Parameters.AddWithValue("@name", name);
+            cmd.Parameters.AddWithValue("@gid", gameId);
             return cmd.ExecuteNonQuery() > 0;
         }).ConfigureAwait(false);
     }

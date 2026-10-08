@@ -16,6 +16,7 @@ namespace DotaPingMonitor.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly DatabaseService _database = new();
+    public DatabaseService Database => _database;
     private readonly DotaSdrPingService _dotaSdr = new();
     private readonly OverlayConfigService _overlayConfigService = new();
     private readonly GlobalKeyboardHook _keyboardHook = new();
@@ -170,6 +171,8 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private PingTargetItemViewModel? _selectedPingTarget;
+
+    public bool IsCustomTargetSelected => SelectedPingTarget?.IsCustom == true;
 
     [ObservableProperty]
     private ThemeItemViewModel? _selectedTheme;
@@ -1008,6 +1011,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedPingTargetChanged(PingTargetItemViewModel? value)
     {
+        OnPropertyChanged(nameof(IsCustomTargetSelected));
         if (value == null) return;
         var cfg = _overlayConfigService.Load();
         cfg.SetSelectedServerForGame(_gameService.CurrentGame.Id, value.Name);
@@ -1107,6 +1111,10 @@ public partial class MainViewModel : ObservableObject
 
     public string LocMtr => LocalizationService.Get("MtrDiagnostics");
     public string LocMtrTooltip => LocalizationService.Get("MtrDiagnosticsTooltip");
+    public string LocIspTicketButton => LocalizationService.Get("IspTicketButton");
+    public string LocIspTicketTooltip => LocalizationService.Get("IspTicketTooltip");
+    public string LocNavIspTicketTitle => LocalizationService.Get("NavIspTicketTitle");
+    public string LocNavIspTicketDesc => LocalizationService.Get("NavIspTicketDesc");
 
     public string LocCurrentPing => LocalizationService.Get("CurrentPing");
     public string LocAvgPing => LocalizationService.Get("AveragePing");
@@ -1247,6 +1255,10 @@ public partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(LocLanguageTooltip));
             OnPropertyChanged(nameof(LocMtr));
             OnPropertyChanged(nameof(LocMtrTooltip));
+            OnPropertyChanged(nameof(LocIspTicketButton));
+            OnPropertyChanged(nameof(LocIspTicketTooltip));
+            OnPropertyChanged(nameof(LocNavIspTicketTitle));
+            OnPropertyChanged(nameof(LocNavIspTicketDesc));
             OnPropertyChanged(nameof(LocCurrentPing));
             OnPropertyChanged(nameof(LocAvgPing));
             OnPropertyChanged(nameof(LocMinPing));
@@ -2766,6 +2778,32 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task OpenIspTicketExportAsync()
+    {
+        string host = SelectedPingTarget?.Ip ?? "8.8.8.8";
+        string name = SelectedPingTarget?.DisplayName ?? "Google DNS (8.8.8.8)";
+        List<PingRecord> records;
+        lock (SessionRecords)
+        {
+            records = SessionRecords.ToList();
+        }
+
+        var data = await IspTicketService.GatherDiagnosticDataAsync(
+            _database,
+            records,
+            name,
+            host,
+            null
+        );
+
+        var win = new IspTicketExportWindow(data)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        win.ShowDialog();
+    }
+
+    [RelayCommand]
     public void OpenNetworkTweaks()
     {
         var win = new NetworkTweaksWindow(_gameBoostService, _networkTweaksService)
@@ -2794,6 +2832,7 @@ public partial class MainViewModel : ObservableObject
             };
             PingTargets.Add(vm);
             SelectedPingTarget = vm;
+            OnPropertyChanged(nameof(IsCustomTargetSelected));
             _ = CheckPingAsync();
         }
     }
@@ -2802,24 +2841,55 @@ public partial class MainViewModel : ObservableObject
     public async Task DeleteCustomServerAsync(PingTargetItemViewModel? target)
     {
         var targetToDelete = target ?? SelectedPingTarget;
-        if (targetToDelete == null || !targetToDelete.IsCustom || targetToDelete.CustomId <= 0) return;
+        if (targetToDelete == null || !targetToDelete.IsCustom) return;
 
-        bool confirm = MessageBox.Show(
-            LocalizationService.IsRussian
-                ? $"Удалить сервер '{targetToDelete.Name}'?"
-                : $"Delete custom target '{targetToDelete.Name}'?",
-            "Ping Monitor",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question) == MessageBoxResult.Yes;
+        // If CustomId is missing or 0, attempt to look it up in the database
+        if (targetToDelete.CustomId <= 0)
+        {
+            try
+            {
+                var customs = await _database.GetCustomTargetsAsync();
+                var found = customs.FirstOrDefault(c => c.Name.Equals(targetToDelete.Name, StringComparison.OrdinalIgnoreCase));
+                if (found != null)
+                {
+                    targetToDelete.CustomId = found.Id;
+                }
+            }
+            catch { }
+        }
+
+        string prompt = LocalizationService.IsRussian
+            ? $"Удалить сервер «{targetToDelete.DisplayName}» ({targetToDelete.Ip})?"
+            : $"Delete custom server \"{targetToDelete.DisplayName}\" ({targetToDelete.Ip})?";
+        string title = LocalizationService.IsRussian ? "Удаление сервера" : "Delete Server";
+
+        var owner = Application.Current?.MainWindow;
+        bool confirm = (owner != null
+            ? MessageBox.Show(owner, prompt, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
+            : MessageBox.Show(prompt, title, MessageBoxButton.YesNo, MessageBoxImage.Question)) == MessageBoxResult.Yes;
 
         if (!confirm) return;
 
-        await _database.DeleteCustomTargetAsync(targetToDelete.CustomId);
-        PingTargets.Remove(targetToDelete);
-        if (SelectedPingTarget == targetToDelete)
+        if (targetToDelete.CustomId > 0)
         {
-            SelectedPingTarget = PingTargets.FirstOrDefault();
+            await _database.DeleteCustomTargetAsync(targetToDelete.CustomId);
         }
+        else
+        {
+            await _database.DeleteCustomTargetByNameAndGameAsync(targetToDelete.Name, _gameService.CurrentGame.Id);
+        }
+
+        PingTargets.Remove(targetToDelete);
+
+        if (SelectedPingTarget == targetToDelete || SelectedPingTarget == null)
+        {
+            SelectedPingTarget = PingTargets.FirstOrDefault(t => !t.IsCustom && t.Name.Equals(_gameService.CurrentGame.DefaultServerName, StringComparison.OrdinalIgnoreCase))
+                ?? PingTargets.FirstOrDefault(t => !t.IsCustom)
+                ?? PingTargets.FirstOrDefault();
+            _ = CheckPingAsync();
+        }
+
+        OnPropertyChanged(nameof(IsCustomTargetSelected));
     }
 
     public async Task LoadCustomTargetsForActiveGameAsync()
@@ -2846,6 +2916,8 @@ public partial class MainViewModel : ObservableObject
                     };
                     PingTargets.Add(vm);
                 }
+
+                OnPropertyChanged(nameof(IsCustomTargetSelected));
             });
         }
         catch { }

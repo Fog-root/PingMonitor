@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using DotaPingMonitor.Data;
 using DotaPingMonitor.Models;
 using DotaPingMonitor.Services;
 using DotaPingMonitor.ViewModels;
@@ -13,17 +14,19 @@ public partial class MtrDiagnosticsWindow : Window
 {
     private readonly string _targetHost;
     private readonly string _targetName;
+    private readonly DatabaseService? _database;
     private readonly MtrService _mtrService = new();
     private readonly ObservableCollection<MtrHopResult> _hops = new();
     private MtrReport? _lastReport;
     private double _lastElapsedSeconds;
     private CancellationTokenSource? _cts;
 
-    public MtrDiagnosticsWindow(string targetHost, string targetName)
+    public MtrDiagnosticsWindow(string targetHost, string targetName, DatabaseService? database = null)
     {
         InitializeComponent();
         _targetHost = targetHost;
         _targetName = targetName;
+        _database = database;
 
         KeyDown += (s, e) =>
         {
@@ -90,6 +93,11 @@ public partial class MtrDiagnosticsWindow : Window
         ColPingText.Text = LocalizationService.IsRussian ? "ОТКЛИК" : "PING";
         ColLossText.Text = LocalizationService.IsRussian ? "ПОТЕРИ" : "LOSS";
         ColStatusText.Text = LocalizationService.IsRussian ? "СОСТОЯНИЕ" : "STATUS";
+
+        IspTicketBtnText.Text = LocalizationService.IsRussian ? "Тикет для провайдера" : "ISP Support Ticket";
+        IspTicketButton.ToolTip = LocalizationService.IsRussian
+            ? "Сформировать готовое вежливое обращение и технический отчёт для техподдержки"
+            : "Generate a complete technical ticket for your ISP tech support";
 
         CopyReportBtnText.Text = LocalizationService.IsRussian ? "Скопировать отчёт" : "Copy report";
         CopyReportButton.ToolTip = LocalizationService.IsRussian
@@ -239,6 +247,35 @@ public partial class MtrDiagnosticsWindow : Window
 
         CopyReportBtnText.Text = LocalizationService.IsRussian ? "Скопировать отчёт" : "Copy report";
         CopyReportButton.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A0A8B4"));
+    }
+
+    private async void IspTicketButton_Click(object sender, RoutedEventArgs e)
+    {
+        IspTicketButton.IsEnabled = false;
+        try
+        {
+            var data = await IspTicketService.GatherDiagnosticDataAsync(
+                _database,
+                null,
+                _targetName,
+                _targetHost,
+                _lastReport
+            );
+
+            var win = new IspTicketExportWindow(data)
+            {
+                Owner = this
+            };
+            win.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            IspTicketButton.IsEnabled = true;
+        }
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

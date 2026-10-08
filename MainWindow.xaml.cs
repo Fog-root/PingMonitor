@@ -212,6 +212,44 @@ public partial class MainWindow : Window
         _ = _viewModel.RefreshAllTargetsPingAsync();
     }
 
+    private void ServerItem_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is PingTargetItemViewModel target && !target.IsCustom)
+        {
+            e.Handled = true;
+        }
+    }
+
+    private async void DeleteCustomServerMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is FrameworkElement fe && fe.DataContext is PingTargetItemViewModel target)
+        {
+            ServerCombo.IsDropDownOpen = false;
+            await _viewModel.DeleteCustomServerAsync(target);
+        }
+    }
+
+    private async void DeleteCustomServerItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is FrameworkElement fe && fe.DataContext is PingTargetItemViewModel target)
+        {
+            ServerCombo.IsDropDownOpen = false;
+            await _viewModel.DeleteCustomServerAsync(target);
+        }
+    }
+
+    private async void DeleteCustomServerItem_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is FrameworkElement fe && fe.DataContext is PingTargetItemViewModel target)
+        {
+            ServerCombo.IsDropDownOpen = false;
+            await _viewModel.DeleteCustomServerAsync(target);
+        }
+    }
+
     private void ProcessesListView_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Delete)
@@ -347,7 +385,7 @@ public partial class MainWindow : Window
 
     private void OnRequestOpenMtr(string targetHost, string targetName)
     {
-        var mtrWin = new MtrDiagnosticsWindow(targetHost, targetName)
+        var mtrWin = new MtrDiagnosticsWindow(targetHost, targetName, _viewModel.Database)
         {
             Owner = this
         };

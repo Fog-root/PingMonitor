@@ -38,9 +38,14 @@ public class PingTargetItemViewModel : ObservableObject
         return text;
     }
 
+    public string DeleteTooltip => LocalizationService.IsRussian
+        ? $"Удалить сервер '{DisplayName}'"
+        : $"Delete custom server '{DisplayName}'";
+
     public void RefreshLocalization()
     {
         OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(DeleteTooltip));
         UpdatePing(PingMs);
     }
 

@@ -15,6 +15,7 @@ namespace DotaPingMonitor.Services;
 public class SpeedtestService : IDisposable
 {
     private static readonly HttpClient HttpClient;
+    private static readonly HttpClient DedicatedPingHttpClient;
 
     static SpeedtestService()
     {
@@ -28,6 +29,71 @@ public class SpeedtestService : IDisposable
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
+
+        var pingHandler = new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+            MaxConnectionsPerServer = 5
+        };
+        DedicatedPingHttpClient = new HttpClient(pingHandler)
+        {
+            Timeout = TimeSpan.FromMilliseconds(1200)
+        };
+    }
+
+    private static async Task<double?> MeasurePingProbeAsync(CancellationToken token)
+    {
+        // 1. Высокоточный сетевой ICMP Ping (32 байта) — чистый RTT сетевого уровня без очередей TCP-сокетов
+        try
+        {
+            using var ping = new System.Net.NetworkInformation.Ping();
+            var reply = await ping.SendPingAsync("1.1.1.1", 600).ConfigureAwait(false);
+            if (reply.Status == System.Net.NetworkInformation.IPStatus.Success && reply.RoundtripTime >= 0)
+            {
+                return (double)reply.RoundtripTime;
+            }
+        }
+        catch { }
+
+        // Резервный хост: 8.8.8.8
+        try
+        {
+            using var ping = new System.Net.NetworkInformation.Ping();
+            var reply = await ping.SendPingAsync("8.8.8.8", 600).ConfigureAwait(false);
+            if (reply.Status == System.Net.NetworkInformation.IPStatus.Success && reply.RoundtripTime >= 0)
+            {
+                return (double)reply.RoundtripTime;
+            }
+        }
+        catch { }
+
+        // Резервный HTTP HEAD через независимый клиент (если ICMP заблокирован в сети)
+        try
+        {
+            var sw = Stopwatch.StartNew();
+            using var req = new HttpRequestMessage(HttpMethod.Head, "https://speed.cloudflare.com/__down?bytes=0");
+            using var resp = await DedicatedPingHttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+            sw.Stop();
+            if (resp.IsSuccessStatusCode)
+            {
+                return sw.Elapsed.TotalMilliseconds;
+            }
+        }
+        catch { }
+
+        return null;
+    }
+
+    private static double GetMedian(List<double> values)
+    {
+        if (values == null || values.Count == 0) return 0;
+        var valid = values.Where(v => v >= 0).OrderBy(x => x).ToList();
+        if (valid.Count == 0) return 0;
+        int count = valid.Count;
+        if (count % 2 == 1)
+            return valid[count / 2];
+        return (valid[(count / 2) - 1] + valid[count / 2]) / 2.0;
     }
 
     private CancellationTokenSource? _cts;
@@ -122,15 +188,9 @@ public class SpeedtestService : IDisposable
             // =========================================================
             // ФАЗА 4: Завершение и формирование отчета
             // =========================================================
-            double maxLoaded = Math.Max(result.LoadedPingDownloadMs, result.LoadedPingUploadMs);
-            if (maxLoaded > 0 && result.PingMs > 0)
-            {
-                result.BufferbloatDeltaMs = Math.Max(0.0, Math.Round(maxLoaded - result.PingMs, 1));
-            }
-            else
-            {
-                result.BufferbloatDeltaMs = 0.0;
-            }
+            double dlDelta = Math.Max(0.0, result.LoadedPingDownloadMs - result.PingMs);
+            double ulDelta = Math.Max(0.0, result.LoadedPingUploadMs - result.PingMs);
+            result.BufferbloatDeltaMs = Math.Round(Math.Max(dlDelta, ulDelta), 1);
 
             result.BufferbloatGrade = result.BufferbloatDeltaMs switch
             {
@@ -244,17 +304,10 @@ public class SpeedtestService : IDisposable
         for (int i = 0; i < pingCount; i++)
         {
             token.ThrowIfCancellationRequested();
-            var sw = Stopwatch.StartNew();
-            try
+            var probe = await MeasurePingProbeAsync(token).ConfigureAwait(false);
+            if (probe.HasValue && probe.Value >= 0)
             {
-                using var req = new HttpRequestMessage(HttpMethod.Get, "https://speed.cloudflare.com/__down?bytes=0");
-                using var resp = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
-                sw.Stop();
-                latencies.Add(sw.Elapsed.TotalMilliseconds);
-            }
-            catch
-            {
-                // Игнорируем единичные сбои
+                latencies.Add(probe.Value);
             }
 
             report.PhaseProgress = (double)(i + 1) / pingCount;
@@ -266,9 +319,8 @@ public class SpeedtestService : IDisposable
 
         if (latencies.Count > 0)
         {
-            latencies.Sort();
-            // Минимальный пинг отбрасывает сетевые помехи
-            result.PingMs = Math.Round(latencies[0], 1);
+            // Медианный пинг отсекает случайные помехи и сокетные выбросы
+            result.PingMs = Math.Round(GetMedian(latencies), 1);
 
             // Расчет джиттера (вариация задержки)
             double jitterSum = 0;
@@ -339,22 +391,20 @@ public class SpeedtestService : IDisposable
         // Фоновый замер задержки под нагрузкой (Loaded Latency / Bufferbloat)
         streamTasks.Add(Task.Run(async () =>
         {
+            await Task.Delay(400, phaseToken).ConfigureAwait(false);
             while (!phaseToken.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(600, phaseToken).ConfigureAwait(false);
-                    var sw = Stopwatch.StartNew();
-                    using var pingReq = new HttpRequestMessage(HttpMethod.Head, "https://speed.cloudflare.com/__down?bytes=0");
-                    using var pingResp = await HttpClient.SendAsync(pingReq, HttpCompletionOption.ResponseHeadersRead, phaseToken).ConfigureAwait(false);
-                    sw.Stop();
-                    if (pingResp.IsSuccessStatusCode)
+                    var probe = await MeasurePingProbeAsync(phaseToken).ConfigureAwait(false);
+                    if (probe.HasValue && probe.Value > 0)
                     {
                         lock (loadedPingSamples)
                         {
-                            loadedPingSamples.Add(sw.Elapsed.TotalMilliseconds);
+                            loadedPingSamples.Add(probe.Value);
                         }
                     }
+                    await Task.Delay(250, phaseToken).ConfigureAwait(false);
                 }
                 catch { }
             }
@@ -435,7 +485,7 @@ public class SpeedtestService : IDisposable
         lock (loadedPingSamples)
         {
             result.LoadedPingDownloadMs = loadedPingSamples.Count > 0 
-                ? Math.Round(loadedPingSamples.Average(), 1) 
+                ? Math.Round(GetMedian(loadedPingSamples), 1) 
                 : result.PingMs;
         }
 
@@ -497,22 +547,20 @@ public class SpeedtestService : IDisposable
         // Фоновый замер задержки под нагрузкой Upload
         streamTasks.Add(Task.Run(async () =>
         {
+            await Task.Delay(400, phaseToken).ConfigureAwait(false);
             while (!phaseToken.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(600, phaseToken).ConfigureAwait(false);
-                    var sw = Stopwatch.StartNew();
-                    using var pingReq = new HttpRequestMessage(HttpMethod.Head, "https://speed.cloudflare.com/__down?bytes=0");
-                    using var pingResp = await HttpClient.SendAsync(pingReq, HttpCompletionOption.ResponseHeadersRead, phaseToken).ConfigureAwait(false);
-                    sw.Stop();
-                    if (pingResp.IsSuccessStatusCode)
+                    var probe = await MeasurePingProbeAsync(phaseToken).ConfigureAwait(false);
+                    if (probe.HasValue && probe.Value > 0)
                     {
                         lock (loadedPingSamples)
                         {
-                            loadedPingSamples.Add(sw.Elapsed.TotalMilliseconds);
+                            loadedPingSamples.Add(probe.Value);
                         }
                     }
+                    await Task.Delay(250, phaseToken).ConfigureAwait(false);
                 }
                 catch { }
             }
@@ -587,7 +635,7 @@ public class SpeedtestService : IDisposable
         lock (loadedPingSamples)
         {
             result.LoadedPingUploadMs = loadedPingSamples.Count > 0 
-                ? Math.Round(loadedPingSamples.Average(), 1) 
+                ? Math.Round(GetMedian(loadedPingSamples), 1) 
                 : result.PingMs;
         }
 
