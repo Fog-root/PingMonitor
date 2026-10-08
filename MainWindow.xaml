@@ -710,11 +710,40 @@
                                                     Opacity="{Binding Bar3Opacity}"
                                                     VerticalAlignment="Bottom"/>
                                         </StackPanel>
+
+                                        <!-- Кнопка удаления пользовательского сервера -->
+                                        <Button Width="16" Height="16"
+                                                Margin="6,0,0,0"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderBrush="Transparent"
+                                                Foreground="{DynamicResource AccentRed}"
+                                                Command="{Binding DataContext.DeleteCustomServerCommand, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                CommandParameter="{Binding}"
+                                                Visibility="{Binding IsCustom, Converter={StaticResource BoolToVisConverter}}"
+                                                ToolTip="{Binding DataContext.LocDeleteCustomServerTooltip, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                Cursor="Hand">
+                                            <TextBlock Text="✕" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+
+                    <!-- Кнопка добавления своего сервера (+) -->
+                    <Button x:Name="AddCustomServerBtn"
+                            Width="26" Height="28"
+                            Margin="3,0,0,0"
+                            Padding="0"
+                            Background="{DynamicResource BgCardElevated}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Foreground="{DynamicResource AccentGreen}"
+                            Command="{Binding AddCustomServerCommand}"
+                            ToolTip="{Binding LocAddCustomServerTooltip}"
+                            Cursor="Hand">
+                        <TextBlock Text="+" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
 
                     <!-- Выбор темы оформления -->
                     <TextBlock Text="{Binding LocTheme}"
@@ -802,6 +831,23 @@
                                        Foreground="{Binding AutoMatchButtonForeground}"
                                        FontSize="11"
                                        FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Кнопка Оптимизация сети и Windows -->
+                    <Button x:Name="NetworkTweaksBtn"
+                            Height="28"
+                            Padding="6,0"
+                            Margin="5,0,0,0"
+                            Background="{DynamicResource BgCardElevated}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Foreground="{DynamicResource AccentBlue}"
+                            Command="{Binding OpenNetworkTweaksCommand}"
+                            ToolTip="{Binding LocNetworkTweaksTooltip}"
+                            Cursor="Hand">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="⚡ " FontSize="11" Foreground="{DynamicResource AccentBlue}"/>
+                            <TextBlock Text="{Binding LocNetworkTweaksButton}" FontSize="11" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
 
@@ -3213,9 +3259,16 @@
                                        Foreground="{DynamicResource TextPrimary}"
                                        FontSize="22" FontWeight="Bold"
                                        Margin="0,0,0,2"/>
-                            <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
                                 <TextBlock Text="Jitter: " Foreground="{DynamicResource TextMuted}" FontSize="9.5"/>
                                 <TextBlock Text="{Binding SpeedtestJitterText}" Foreground="{DynamicResource TextSecondary}" FontSize="9.5" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Bufferbloat: " Foreground="{DynamicResource TextMuted}" FontSize="9.5"/>
+                                <TextBlock Text="{Binding SpeedtestBufferbloatText}" Foreground="{Binding SpeedtestBufferbloatForeground}" FontSize="9.5" FontWeight="SemiBold"/>
+                                <Border Background="{DynamicResource BgInput}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1" CornerRadius="3" Padding="4,0" Margin="4,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SpeedtestBufferbloatGrade}" Foreground="{Binding SpeedtestBufferbloatForeground}" FontSize="8.5" FontWeight="Bold"/>
+                                </Border>
                             </StackPanel>
                         </StackPanel>
                     </Border>

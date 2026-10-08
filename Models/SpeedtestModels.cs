@@ -59,6 +59,16 @@ public class SpeedtestResult : ObservableObject
     [JsonIgnore]
     public string JitterText => LocalizationService.FormatJitter(JitterMs);
 
+    public double LoadedPingDownloadMs { get; set; }
+    public double LoadedPingUploadMs { get; set; }
+    public double BufferbloatDeltaMs { get; set; }
+    public string BufferbloatGrade { get; set; } = "A+";
+
+    [JsonIgnore]
+    public string BufferbloatText => BufferbloatDeltaMs > 0 
+        ? $"+{BufferbloatDeltaMs:F0} ms ({BufferbloatGrade})" 
+        : $"0 ms ({BufferbloatGrade})";
+
     [JsonIgnore]
     public string ServerFullText => !string.IsNullOrEmpty(ServerColo) 
         ? $"{ServerLocation} ({ServerColo})" 
@@ -105,6 +115,10 @@ public class SpeedtestProgressReport
     public string ServerLocation { get; set; } = string.Empty;
 
     public string ServerColo { get; set; } = string.Empty;
+
+    public double BufferbloatDeltaMs { get; set; }
+
+    public string BufferbloatGrade { get; set; } = string.Empty;
 
     public string StatusMessage { get; set; } = string.Empty;
 }

@@ -80,6 +80,15 @@ public partial class MainViewModel
     private string _speedtestJitterText = "±-- ms";
 
     [ObservableProperty]
+    private string _speedtestBufferbloatText = "-- ms";
+
+    [ObservableProperty]
+    private string _speedtestBufferbloatGrade = "--";
+
+    [ObservableProperty]
+    private Brush _speedtestBufferbloatForeground = (Brush)new BrushConverter().ConvertFromString("#59D499")!;
+
+    [ObservableProperty]
     private string _speedtestClientIp = "--";
 
     [ObservableProperty]
@@ -438,6 +447,14 @@ public partial class MainViewModel
             SpeedtestUploadText = LocalizationService.FormatSpeed(result.UploadSpeedMbps);
             SpeedtestPingText = $"{result.PingMs:F0} ms";
             SpeedtestJitterText = LocalizationService.FormatJitter(result.JitterMs);
+            SpeedtestBufferbloatText = result.BufferbloatDeltaMs > 0 ? $"+{result.BufferbloatDeltaMs:F0} ms" : "0 ms";
+            SpeedtestBufferbloatGrade = result.BufferbloatGrade;
+            SpeedtestBufferbloatForeground = result.BufferbloatGrade switch
+            {
+                "A+" or "A" => (Brush)new BrushConverter().ConvertFromString("#59D499")!,
+                "B" => (Brush)new BrushConverter().ConvertFromString("#FFC533")!,
+                _ => (Brush)new BrushConverter().ConvertFromString("#FF6161")!
+            };
 
             _targetSpeedMbps = result.DownloadSpeedMbps;
             _targetGaugeAngle = CalculateGaugeAngle(result.DownloadSpeedMbps);

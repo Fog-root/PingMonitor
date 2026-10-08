@@ -11,6 +11,8 @@ public class PingTargetItemViewModel : ObservableObject
 {
     public string Name { get; set; } = string.Empty;
     public string Ip { get; set; } = string.Empty;
+    public bool IsCustom { get; set; } = false;
+    public int CustomId { get; set; } = 0;
 
     public string DisplayName => GetLocalizedName(Name);
 

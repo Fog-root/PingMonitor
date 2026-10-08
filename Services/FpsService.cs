@@ -74,6 +74,10 @@ public class FpsService : IDisposable
     private IntPtr _dwmBuffer = IntPtr.Zero;
 
     public event Action<int>? FpsUpdated;
+    public event Action<bool, string>? GameFocusChanged;
+
+    public bool IsGameFocused => _isGameFocused;
+    public string TargetGameName => _targetGameName;
 
     public bool IsRunning => _isRunning;
 
@@ -417,6 +421,9 @@ public class FpsService : IDisposable
 
     private void UpdateTargetProcess()
     {
+        bool prevFocused = _isGameFocused;
+        string prevName = _targetGameName;
+
         try
         {
             IntPtr fgHwnd = GetForegroundWindow();
@@ -510,6 +517,13 @@ public class FpsService : IDisposable
         catch
         {
             // Безопасный перехват возможных сбоев WinAPI
+        }
+        finally
+        {
+            if (prevFocused != _isGameFocused || !string.Equals(prevName, _targetGameName, StringComparison.OrdinalIgnoreCase))
+            {
+                GameFocusChanged?.Invoke(_isGameFocused, _targetGameName);
+            }
         }
     }
 

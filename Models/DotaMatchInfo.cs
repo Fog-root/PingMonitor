@@ -8,6 +8,16 @@ public class DotaMatchInfo
     public bool IsConnected { get; set; }
 
     /// <summary>
+    /// Идентификатор игры (dota2, cs2, deadlock)
+    /// </summary>
+    public string GameId { get; set; } = "dota2";
+
+    /// <summary>
+    /// Отображаемое название игры (Dota 2, CS2, Deadlock)
+    /// </summary>
+    public string GameName { get; set; } = "Dota 2";
+
+    /// <summary>
     /// Код кластера Valve POP (например: sto2, fra, vie, waw, lux)
     /// </summary>
     public string ClusterCode { get; set; } = string.Empty;

@@ -122,6 +122,28 @@ public class SpeedtestService : IDisposable
             // =========================================================
             // ФАЗА 4: Завершение и формирование отчета
             // =========================================================
+            double maxLoaded = Math.Max(result.LoadedPingDownloadMs, result.LoadedPingUploadMs);
+            if (maxLoaded > 0 && result.PingMs > 0)
+            {
+                result.BufferbloatDeltaMs = Math.Max(0.0, Math.Round(maxLoaded - result.PingMs, 1));
+            }
+            else
+            {
+                result.BufferbloatDeltaMs = 0.0;
+            }
+
+            result.BufferbloatGrade = result.BufferbloatDeltaMs switch
+            {
+                <= 5 => "A+",
+                <= 15 => "A",
+                <= 30 => "B",
+                <= 60 => "C",
+                <= 100 => "D",
+                _ => "F"
+            };
+
+            report.BufferbloatDeltaMs = result.BufferbloatDeltaMs;
+            report.BufferbloatGrade = result.BufferbloatGrade;
             report.Phase = SpeedtestPhase.Completed;
             report.CurrentSpeedMbps = 0;
             report.TotalProgress = 1.0;
@@ -281,6 +303,8 @@ public class SpeedtestService : IDisposable
         double currentSmoothedMbps = 0;
         double peakMbps = 0;
 
+        var loadedPingSamples = new List<double>();
+
         // Запуск параллельных потоков загрузки
         for (int i = 0; i < activeStreams; i++)
         {
@@ -311,6 +335,30 @@ public class SpeedtestService : IDisposable
                 }
             }, phaseToken));
         }
+
+        // Фоновый замер задержки под нагрузкой (Loaded Latency / Bufferbloat)
+        streamTasks.Add(Task.Run(async () =>
+        {
+            while (!phaseToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(600, phaseToken).ConfigureAwait(false);
+                    var sw = Stopwatch.StartNew();
+                    using var pingReq = new HttpRequestMessage(HttpMethod.Head, "https://speed.cloudflare.com/__down?bytes=0");
+                    using var pingResp = await HttpClient.SendAsync(pingReq, HttpCompletionOption.ResponseHeadersRead, phaseToken).ConfigureAwait(false);
+                    sw.Stop();
+                    if (pingResp.IsSuccessStatusCode)
+                    {
+                        lock (loadedPingSamples)
+                        {
+                            loadedPingSamples.Add(sw.Elapsed.TotalMilliseconds);
+                        }
+                    }
+                }
+                catch { }
+            }
+        }, phaseToken));
 
         // Поток дискретного замера скорости (каждые 120 мс)
         var swTotal = Stopwatch.StartNew();
@@ -383,6 +431,14 @@ public class SpeedtestService : IDisposable
 
         result.DownloadSpeedMbps = Math.Round(finalAverage, 1);
         result.DownloadPeakMbps = Math.Round(peakMbps > 0 ? peakMbps : finalAverage, 1);
+
+        lock (loadedPingSamples)
+        {
+            result.LoadedPingDownloadMs = loadedPingSamples.Count > 0 
+                ? Math.Round(loadedPingSamples.Average(), 1) 
+                : result.PingMs;
+        }
+
         report.DownloadSpeedMbps = result.DownloadSpeedMbps;
         report.DownloadPeakMbps = result.DownloadPeakMbps;
         ReportProgress(report);
@@ -408,6 +464,8 @@ public class SpeedtestService : IDisposable
         var speedSamples = new List<double>();
         double currentSmoothedMbps = 0;
         double peakMbps = 0;
+
+        var loadedPingSamples = new List<double>();
 
         for (int i = 0; i < activeStreams; i++)
         {
@@ -435,6 +493,30 @@ public class SpeedtestService : IDisposable
                 }
             }, phaseToken));
         }
+
+        // Фоновый замер задержки под нагрузкой Upload
+        streamTasks.Add(Task.Run(async () =>
+        {
+            while (!phaseToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(600, phaseToken).ConfigureAwait(false);
+                    var sw = Stopwatch.StartNew();
+                    using var pingReq = new HttpRequestMessage(HttpMethod.Head, "https://speed.cloudflare.com/__down?bytes=0");
+                    using var pingResp = await HttpClient.SendAsync(pingReq, HttpCompletionOption.ResponseHeadersRead, phaseToken).ConfigureAwait(false);
+                    sw.Stop();
+                    if (pingResp.IsSuccessStatusCode)
+                    {
+                        lock (loadedPingSamples)
+                        {
+                            loadedPingSamples.Add(sw.Elapsed.TotalMilliseconds);
+                        }
+                    }
+                }
+                catch { }
+            }
+        }, phaseToken));
 
         var swTotal = Stopwatch.StartNew();
         long prevBytes = 0;
@@ -501,6 +583,14 @@ public class SpeedtestService : IDisposable
             : (swTotal.Elapsed.TotalSeconds > 0 ? (totalUploadedBytes * 8.0) / (swTotal.Elapsed.TotalSeconds * 1_000_000.0) : 0);
 
         result.UploadSpeedMbps = Math.Round(finalAverage, 1);
+
+        lock (loadedPingSamples)
+        {
+            result.LoadedPingUploadMs = loadedPingSamples.Count > 0 
+                ? Math.Round(loadedPingSamples.Average(), 1) 
+                : result.PingMs;
+        }
+
         report.UploadSpeedMbps = result.UploadSpeedMbps;
         ReportProgress(report);
     }

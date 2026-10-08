@@ -12,10 +12,17 @@ namespace DotaPingMonitor.Services;
 /// Определяет выделенный игровой сервер Valve и первичный SDR-релей через passive console.log streaming.
 /// 100% VAC-безопасно (только чтение текстового лога, никаких хуков и инъекций).
 /// </summary>
-public partial class DotaMatchTrackerService : IDisposable
+public partial class DotaMatchTrackerService : IGameMatchTracker
 {
     private readonly System.Timers.Timer _pollTimer;
     private readonly object _syncLock = new();
+    private readonly Cs2MatchTrackerService _cs2Tracker = new();
+    private readonly DeadlockMatchTrackerService _deadlockTracker = new();
+    private string _activeGameId = "dota2";
+    private string _activeGameName = "Dota 2";
+
+    public string ActiveGameId => _activeGameId;
+    public string ActiveGameName => _activeGameName;
 
     private string? _cachedLogPath;
     private FileStream? _fileStream;
@@ -26,7 +33,12 @@ public partial class DotaMatchTrackerService : IDisposable
     private bool _wasDotaRunning = false;
     private Func<string, int, string?>? _destinationClusterResolver;
 
-    public void SetDestinationResolver(Func<string, int, string?>? resolver) => _destinationClusterResolver = resolver;
+    public void SetDestinationResolver(Func<string, int, string?>? resolver)
+    {
+        _destinationClusterResolver = resolver;
+        _cs2Tracker.SetDestinationResolver(resolver);
+        _deadlockTracker.SetDestinationResolver(resolver);
+    }
 
     [GeneratedRegex(@"(?:Selecting|Swapping primary to)\s+(?<cluster>[a-zA-Z0-9_-]+)(?:#\d+)?\s+\((?<ip>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):(?<port>[0-9]+)\)\s+as\s+primary(?:.*?(?:Ping\s*=\s*(?<total>\d+)\s*=\s*(?<front>\d+)\+(?<interior>\d+)))?", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex RelayPattern();
@@ -50,7 +62,14 @@ public partial class DotaMatchTrackerService : IDisposable
     private static partial Regex ServerSteamIdPattern();
 
     public bool IsDotaRunningWithoutLog { get; private set; }
+    public bool IsRunningWithoutLog => _activeGameId switch
+    {
+        "cs2" => _cs2Tracker.IsRunningWithoutLog,
+        "deadlock" => _deadlockTracker.IsRunningWithoutLog,
+        _ => IsDotaRunningWithoutLog
+    };
     public event Action<bool>? DotaLoggingStatusChanged;
+    public event Action<bool>? LoggingStatusChanged;
     private DateTime _dotaStartTime = DateTime.MinValue;
 
     // Карта известных кластеров Valve POP
@@ -145,6 +164,62 @@ public partial class DotaMatchTrackerService : IDisposable
         _pollTimer = new System.Timers.Timer(400); // Опрос лога каждые 400 мс
         _pollTimer.AutoReset = false;
         _pollTimer.Elapsed += (_, _) => OnPollTimerTick();
+
+        _cs2Tracker.MatchConnected += m => { if (_activeGameId == "cs2") { IsInMatch = true; CurrentMatch = m; MatchConnected?.Invoke(m); } };
+        _cs2Tracker.MatchDisconnected += () => { if (_activeGameId == "cs2") { IsInMatch = false; CurrentMatch = null; MatchDisconnected?.Invoke(); } };
+        _cs2Tracker.StatusChanged += s => { if (_activeGameId == "cs2") StatusChanged?.Invoke(s); };
+        _cs2Tracker.LoggingStatusChanged += b => { if (_activeGameId == "cs2") { DotaLoggingStatusChanged?.Invoke(b); LoggingStatusChanged?.Invoke(b); } };
+
+        _deadlockTracker.MatchConnected += m => { if (_activeGameId == "deadlock") { IsInMatch = true; CurrentMatch = m; MatchConnected?.Invoke(m); } };
+        _deadlockTracker.MatchDisconnected += () => { if (_activeGameId == "deadlock") { IsInMatch = false; CurrentMatch = null; MatchDisconnected?.Invoke(); } };
+        _deadlockTracker.StatusChanged += s => { if (_activeGameId == "deadlock") StatusChanged?.Invoke(s); };
+        _deadlockTracker.LoggingStatusChanged += b => { if (_activeGameId == "deadlock") { DotaLoggingStatusChanged?.Invoke(b); LoggingStatusChanged?.Invoke(b); } };
+    }
+
+    public void SetGame(string gameId)
+    {
+        lock (_syncLock)
+        {
+            if (string.IsNullOrWhiteSpace(gameId)) gameId = "dota2";
+            string norm = gameId.Trim().ToLowerInvariant();
+            if (_activeGameId == norm) return;
+
+            _activeGameId = norm;
+            _activeGameName = norm switch
+            {
+                "cs2" => "Counter-Strike 2",
+                "deadlock" => "Deadlock",
+                _ => "Dota 2"
+            };
+
+            if (_activeGameId == "cs2")
+            {
+                _cs2Tracker.SetDestinationResolver(_destinationClusterResolver);
+                _cs2Tracker.Start();
+                _deadlockTracker.Stop();
+            }
+            else if (_activeGameId == "deadlock")
+            {
+                _deadlockTracker.SetDestinationResolver(_destinationClusterResolver);
+                _deadlockTracker.Start();
+                _cs2Tracker.Stop();
+            }
+            else
+            {
+                _cs2Tracker.Stop();
+                _deadlockTracker.Stop();
+            }
+
+            CloseStream();
+            _lastPosition = 0;
+            _isInitialized = false;
+            _cachedLogPath = FindDotaConsoleLog();
+            if (IsInMatch)
+            {
+                HandleMatchDisconnected();
+            }
+            TriggerPollNow();
+        }
     }
 
     public void Start()
@@ -676,7 +751,7 @@ public partial class DotaMatchTrackerService : IDisposable
     /// <summary>
     /// Извлекает пути всех библиотек Steam из реестра Windows и libraryfolders.vdf
     /// </summary>
-    private static List<string> GetSteamInstallDirectories()
+    public static List<string> GetSteamInstallDirectories()
     {
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -785,6 +860,8 @@ public partial class DotaMatchTrackerService : IDisposable
         {
             _isDisposed = true;
             _pollTimer.Dispose();
+            _cs2Tracker.Dispose();
+            _deadlockTracker.Dispose();
             CloseStream();
         }
         GC.SuppressFinalize(this);

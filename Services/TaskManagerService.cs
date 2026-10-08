@@ -502,6 +502,7 @@ public class TaskManagerService : IDisposable
 
         // 4. Определение процессов с активными сетевыми сокетами (TCP & UDP)
         var networkPids = new HashSet<int>();
+        var activeSocketsByPid = new Dictionary<int, int>();
         if (!ThemeService.IsOptimizedMode)
         {
             try
@@ -525,7 +526,10 @@ public class TaskManagerService : IDisposable
                         for (int i = 0; i < count; i++)
                         {
                             var row = Marshal.PtrToStructure<MIB_TCPROW_OWNER_PID>(ptr);
-                            networkPids.Add((int)row.owningPid);
+                            int pid = (int)row.owningPid;
+                            networkPids.Add(pid);
+                            int weight = row.state == 5 ? 3 : 1; // 5 = ESTABLISHED
+                            activeSocketsByPid[pid] = activeSocketsByPid.GetValueOrDefault(pid) + weight;
                             ptr = IntPtr.Add(ptr, rowSize);
                         }
                     }
@@ -554,7 +558,9 @@ public class TaskManagerService : IDisposable
                         for (int i = 0; i < count; i++)
                         {
                             var row = Marshal.PtrToStructure<MIB_UDPROW_OWNER_PID>(ptr);
-                            networkPids.Add((int)row.owningPid);
+                            int pid = (int)row.owningPid;
+                            networkPids.Add(pid);
+                            activeSocketsByPid[pid] = activeSocketsByPid.GetValueOrDefault(pid) + 2;
                             ptr = IntPtr.Add(ptr, rowSize);
                         }
                     }
@@ -761,6 +767,22 @@ public class TaskManagerService : IDisposable
         var gpuUsageByPid = _gpuService.GetProcessGpuUsage();
         var items = new List<ProcessItem>(tempItems.Count);
 
+        double allocatedNetSpeed = 0.0;
+        double totalCandidateSocketWeight = 0.0;
+
+        if (!ThemeService.IsOptimizedMode && totalNetSpeed >= 512)
+        {
+            foreach (var (item, rawIoSpeed, hasNetwork) in tempItems)
+            {
+                if (hasNetwork)
+                {
+                    int sockets = activeSocketsByPid.GetValueOrDefault(item.Pid, 1);
+                    double weight = sockets * Math.Max(0.2, item.CpuPercent);
+                    totalCandidateSocketWeight += weight;
+                }
+            }
+        }
+
         foreach (var (item, rawIoSpeed, hasNetwork) in tempItems)
         {
             double netSpeed = 0.0;
@@ -769,16 +791,28 @@ public class TaskManagerService : IDisposable
             if (!ThemeService.IsOptimizedMode)
             {
                 diskSpeed = rawIoSpeed;
-                if (hasNetwork && rawIoSpeed > 1024 && totalNetSpeed >= 1024)
+                if (hasNetwork && totalNetSpeed >= 512)
                 {
-                    if (sumCandidateIo <= totalNetSpeed)
+                    if (rawIoSpeed > 1024 && sumCandidateIo >= 1024)
                     {
-                        netSpeed = rawIoSpeed;
+                        if (sumCandidateIo <= totalNetSpeed)
+                        {
+                            netSpeed = rawIoSpeed;
+                        }
+                        else
+                        {
+                            netSpeed = rawIoSpeed * (totalNetSpeed / sumCandidateIo);
+                        }
+                        allocatedNetSpeed += netSpeed;
                     }
-                    else
+                    else if (totalCandidateSocketWeight > 0)
                     {
-                        netSpeed = rawIoSpeed * (totalNetSpeed / sumCandidateIo);
+                        int sockets = activeSocketsByPid.GetValueOrDefault(item.Pid, 1);
+                        double weight = sockets * Math.Max(0.2, item.CpuPercent);
+                        double unallocated = Math.Max(0.0, totalNetSpeed - allocatedNetSpeed);
+                        netSpeed = unallocated * (weight / totalCandidateSocketWeight);
                     }
+
                     netSpeed = Math.Min(netSpeed, totalNetSpeed);
                     diskSpeed = Math.Max(0.0, rawIoSpeed - netSpeed);
                 }

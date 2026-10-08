@@ -34,6 +34,8 @@ public class OverlayConfig
 
     public bool AutoDetectDotaMatch { get; set; } = true;
 
+    public bool AutoHideWhenNoGame { get; set; } = false;
+
     public string Language { get; set; } = "";
 
     public string SelectedServer { get; set; } = "";

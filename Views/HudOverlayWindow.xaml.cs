@@ -121,6 +121,7 @@ public partial class HudOverlayWindow : Window
             UpdateContextMenuLocalization();
             OnThemeChanged(ThemeService.Current);
             UpdateOptimizationMenuHeader();
+            UpdateAutoHideMenuHeader();
             if (IsVisible)
             {
                 _hoverTimer.Start();
@@ -494,6 +495,12 @@ public partial class HudOverlayWindow : Window
         if (NetGraphMatchBadge != null) NetGraphMatchBadge.Visibility = Visibility.Collapsed;
 
         ApplyServerCodeToAllBadges();
+    }
+
+    public void UpdateBufferbloatWarning(bool isBufferbloat)
+    {
+        if (HudBufferbloatBadge == null) return;
+        HudBufferbloatBadge.Visibility = isBufferbloat ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ApplyServerCodeToAllBadges()
@@ -1402,6 +1409,7 @@ public partial class HudOverlayWindow : Window
         SetCheck("vertical_stack", "PresetVerticalStack", "Vertical Widget (Угловой стек)");
         SetCheck("net_graph", "PresetNetGraph", "Pro Gamer (NetGraph телеметрия)");
         SetCheck("cyber_hud", "PresetCyberHud", "Cyber HUD (Футуристичный)");
+        UpdateAutoHideMenuHeader();
     }
 
     public double BaseOpacity => _config.BaseOpacity > 0 ? _config.BaseOpacity : 0.92;
@@ -2043,6 +2051,53 @@ public partial class HudOverlayWindow : Window
                 ? (LocalizationService.IsRussian ? "✓ Оптимизация интерфейса" : "✓ Interface Optimization")
                 : (LocalizationService.IsRussian ? "  Оптимизация интерфейса" : "  Interface Optimization");
         }
+    }
+
+    private void MenuAutoHideToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _config.AutoHideWhenNoGame = !_config.AutoHideWhenNoGame;
+        SaveConfig();
+        UpdateAutoHideMenuHeader();
+    }
+
+    private void UpdateAutoHideMenuHeader()
+    {
+        var cm = GetContextMenu();
+        if (cm == null) return;
+        var hideItem = FindMenuItemByTag(cm.Items, "auto_hide_toggle");
+        if (hideItem != null)
+        {
+            hideItem.Header = _config.AutoHideWhenNoGame
+                ? (LocalizationService.IsRussian ? "✓ Авто-скрытие вне игры" : "✓ Auto-hide when not in game")
+                : (LocalizationService.IsRussian ? "  Авто-скрытие вне игры" : "  Auto-hide when not in game");
+        }
+    }
+
+    public void OnGameFocusChanged(bool isGameFocused, string gameName)
+    {
+        if (!_config.AutoHideWhenNoGame) return;
+        if (!_config.IsEnabled) return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (isGameFocused)
+            {
+                if (!IsVisible)
+                {
+                    Show();
+                    Topmost = true;
+                    StateChangedNotification?.Invoke(true);
+                }
+            }
+            else
+            {
+                if (IsVisible)
+                {
+                    Hide();
+                    StateChangedNotification?.Invoke(false);
+                }
+            }
+        });
     }
 
     // =========================================================

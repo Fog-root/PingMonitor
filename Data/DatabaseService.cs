@@ -47,6 +47,13 @@ public class DatabaseService
                     IncidentCategory TEXT DEFAULT '',
                     IncidentDescription TEXT DEFAULT ''
                 );
+                CREATE TABLE IF NOT EXISTS CustomTargets (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    GameId TEXT NOT NULL DEFAULT 'all',
+                    Name TEXT NOT NULL,
+                    Host TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL
+                );
             ";
             cmd.ExecuteNonQuery();
         }).ConfigureAwait(false);
@@ -255,5 +262,84 @@ public class DatabaseService
             IncidentCategory = reader.IsDBNull(10) ? "" : reader.GetString(10),
             IncidentDescription = reader.IsDBNull(11) ? "" : reader.GetString(11)
         };
+    }
+
+    public async Task<List<CustomPingTarget>> GetCustomTargetsAsync(string? gameId = null)
+    {
+        return await Task.Run(() =>
+        {
+            var list = new List<CustomPingTarget>();
+            using var con = new SqliteConnection(ConnectionString);
+            con.Open();
+            using var cmd = con.CreateCommand();
+
+            if (string.IsNullOrEmpty(gameId) || gameId == "all")
+            {
+                cmd.CommandText = "SELECT Id, GameId, Name, Host, CreatedAt FROM CustomTargets ORDER BY Id ASC;";
+            }
+            else
+            {
+                cmd.CommandText = "SELECT Id, GameId, Name, Host, CreatedAt FROM CustomTargets WHERE GameId = @gid OR GameId = 'all' ORDER BY Id ASC;";
+                cmd.Parameters.AddWithValue("@gid", gameId);
+            }
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                DateTime.TryParse(reader.GetString(4), null, System.Globalization.DateTimeStyles.RoundtripKind, out var ct);
+                list.Add(new CustomPingTarget
+                {
+                    Id = reader.GetInt32(0),
+                    GameId = reader.GetString(1),
+                    Name = reader.GetString(2),
+                    Host = reader.GetString(3),
+                    CreatedAt = ct
+                });
+            }
+            return list;
+        }).ConfigureAwait(false);
+    }
+
+    public async Task<CustomPingTarget> AddCustomTargetAsync(string name, string host, string gameId = "all")
+    {
+        return await Task.Run(() =>
+        {
+            var target = new CustomPingTarget
+            {
+                Name = name.Trim(),
+                Host = host.Trim(),
+                GameId = string.IsNullOrWhiteSpace(gameId) ? "all" : gameId.Trim().ToLowerInvariant(),
+                CreatedAt = DateTime.Now
+            };
+
+            using var con = new SqliteConnection(ConnectionString);
+            con.Open();
+            using var cmd = con.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO CustomTargets (GameId, Name, Host, CreatedAt)
+                VALUES (@gid, @name, @host, @created);
+                SELECT last_insert_rowid();
+            ";
+            cmd.Parameters.AddWithValue("@gid", target.GameId);
+            cmd.Parameters.AddWithValue("@name", target.Name);
+            cmd.Parameters.AddWithValue("@host", target.Host);
+            cmd.Parameters.AddWithValue("@created", target.CreatedAt.ToString("o"));
+
+            target.Id = Convert.ToInt32(cmd.ExecuteScalar());
+            return target;
+        }).ConfigureAwait(false);
+    }
+
+    public async Task<bool> DeleteCustomTargetAsync(int id)
+    {
+        return await Task.Run(() =>
+        {
+            using var con = new SqliteConnection(ConnectionString);
+            con.Open();
+            using var cmd = con.CreateCommand();
+            cmd.CommandText = "DELETE FROM CustomTargets WHERE Id = @id;";
+            cmd.Parameters.AddWithValue("@id", id);
+            return cmd.ExecuteNonQuery() > 0;
+        }).ConfigureAwait(false);
     }
 }

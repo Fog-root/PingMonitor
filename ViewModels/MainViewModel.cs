@@ -25,10 +25,14 @@ public partial class MainViewModel : ObservableObject
     private readonly TaskManagerService _taskManagerService = new();
     private readonly RamService _ramService = new();
     private readonly DotaMatchTrackerService _dotaMatchTrackerService = new();
+    private readonly GameBoostService _gameBoostService = new();
+    private readonly NetworkTweaksService _networkTweaksService = new();
     private readonly GameService _gameService;
 
     public GameService GameService => _gameService;
     public DotaMatchTrackerService DotaMatchTracker => _dotaMatchTrackerService;
+    public GameBoostService GameBoost => _gameBoostService;
+    public NetworkTweaksService NetworkTweaks => _networkTweaksService;
 
     private readonly Dictionary<string, List<PingRecord>> _gameSessionRecords = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<HistoryItemViewModel>> _gameHistoryItems = new(StringComparer.OrdinalIgnoreCase);
@@ -883,6 +887,7 @@ public partial class MainViewModel : ObservableObject
         {
             await _database.InitializeAsync().ConfigureAwait(false);
             await _database.ClearAllAsync().ConfigureAwait(false);
+            await LoadCustomTargetsForActiveGameAsync().ConfigureAwait(false);
         });
 
         SessionRecords.Clear();
@@ -1153,6 +1158,11 @@ public partial class MainViewModel : ObservableObject
     public string LocNavMenuTooltip => LocalizationService.Get("NavMenuTooltip");
     public string LocGameComboTooltip => LocalizationService.Get("GameComboTooltip");
 
+    public string LocNetworkTweaksButton => LocalizationService.IsRussian ? "Твики сети" : "Net Tweaks";
+    public string LocNetworkTweaksTooltip => LocalizationService.IsRussian ? "Оптимизация сети и игровой режим (Game Boost, Nagle, Flush DNS)" : "Network latency optimization and Game Boost Mode";
+    public string LocAddCustomServerTooltip => LocalizationService.IsRussian ? "Добавить свой сервер (IP / Домен)" : "Add custom target (IP / Domain)";
+    public string LocDeleteCustomServerTooltip => LocalizationService.IsRussian ? "Удалить этот сервер" : "Delete this custom server";
+
     public string LocSpeedtestStart => LocalizationService.Get("SpeedtestStart");
     public string LocSpeedtestCancel => LocalizationService.Get("SpeedtestCancel");
     public string LocSpeedtestTesting => LocalizationService.Get("SpeedtestTesting");
@@ -1352,6 +1362,10 @@ public partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(HeaderSubtitleText));
             OnPropertyChanged(nameof(WindowTitle));
             OnPropertyChanged(nameof(NavGamePingTitle));
+            OnPropertyChanged(nameof(LocNetworkTweaksButton));
+            OnPropertyChanged(nameof(LocNetworkTweaksTooltip));
+            OnPropertyChanged(nameof(LocAddCustomServerTooltip));
+            OnPropertyChanged(nameof(LocDeleteCustomServerTooltip));
 
             OnPropertyChanged(nameof(MenuLayoutHeader));
             OnPropertyChanged(nameof(MenuOpacityHeader));
@@ -2752,6 +2766,92 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void OpenNetworkTweaks()
+    {
+        var win = new NetworkTweaksWindow(_gameBoostService, _networkTweaksService)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        win.ShowDialog();
+    }
+
+    [RelayCommand]
+    public async Task AddCustomServerAsync()
+    {
+        var dlg = new AddCustomTargetDialog
+        {
+            Owner = Application.Current.MainWindow
+        };
+        if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.ResultHost))
+        {
+            var savedTarget = await _database.AddCustomTargetAsync(dlg.ResultName, dlg.ResultHost, _gameService.CurrentGame.Id);
+            var vm = new PingTargetItemViewModel
+            {
+                Name = savedTarget.Name,
+                Ip = savedTarget.Host,
+                IsCustom = true,
+                CustomId = savedTarget.Id
+            };
+            PingTargets.Add(vm);
+            SelectedPingTarget = vm;
+            _ = CheckPingAsync();
+        }
+    }
+
+    [RelayCommand]
+    public async Task DeleteCustomServerAsync(PingTargetItemViewModel? target)
+    {
+        var targetToDelete = target ?? SelectedPingTarget;
+        if (targetToDelete == null || !targetToDelete.IsCustom || targetToDelete.CustomId <= 0) return;
+
+        bool confirm = MessageBox.Show(
+            LocalizationService.IsRussian
+                ? $"Удалить сервер '{targetToDelete.Name}'?"
+                : $"Delete custom target '{targetToDelete.Name}'?",
+            "Ping Monitor",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question) == MessageBoxResult.Yes;
+
+        if (!confirm) return;
+
+        await _database.DeleteCustomTargetAsync(targetToDelete.CustomId);
+        PingTargets.Remove(targetToDelete);
+        if (SelectedPingTarget == targetToDelete)
+        {
+            SelectedPingTarget = PingTargets.FirstOrDefault();
+        }
+    }
+
+    public async Task LoadCustomTargetsForActiveGameAsync()
+    {
+        try
+        {
+            var customs = await _database.GetCustomTargetsAsync(_gameService.CurrentGame.Id);
+            Dispatch(() =>
+            {
+                var existingCustoms = PingTargets.Where(t => t.IsCustom).ToList();
+                foreach (var ec in existingCustoms)
+                {
+                    PingTargets.Remove(ec);
+                }
+
+                foreach (var c in customs)
+                {
+                    var vm = new PingTargetItemViewModel
+                    {
+                        Name = c.Name,
+                        Ip = c.Host,
+                        IsCustom = true,
+                        CustomId = c.Id
+                    };
+                    PingTargets.Add(vm);
+                }
+            });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
     public void SetChartInterval(int minutes)
     {
         ChartIntervalMinutes = minutes;
@@ -2805,6 +2905,11 @@ public partial class MainViewModel : ObservableObject
                 ? DotaMatchBadgeText
                 : GetServerRegionCode(SelectedPingTarget);
             _overlayWindow.UpdateServerCode(initialCode);
+
+            _fpsService.GameFocusChanged += (isFocused, gameName) =>
+            {
+                _overlayWindow?.OnGameFocusChanged(isFocused, gameName);
+            };
 
             _overlayWindow.StateChangedNotification += _ => UpdateOverlayButtonState();
             _overlayWindow.Closed += (_, _) =>
@@ -3000,8 +3105,9 @@ public partial class MainViewModel : ObservableObject
             HkRamStatusForeground = grayMuted;
         }
 
-        // Управление сервисом FPS (запускаем только когда оверлей активен и FPS включен)
-        if (isVisible && isFpsOn)
+        // Управление сервисом FPS (запускаем когда оверлей активен и FPS включен, либо активно авто-скрытие)
+        bool needFps = (isVisible && isFpsOn) || cfg.AutoHideWhenNoGame;
+        if (needFps)
         {
             if (!_fpsService.IsRunning) _fpsService.Start();
         }
@@ -3273,6 +3379,7 @@ public partial class MainViewModel : ObservableObject
         // 2. Переключаем дисциплину в GameService
         _gameService.SetCurrentGame(gameId);
         var newGame = _gameService.CurrentGame;
+        _dotaMatchTrackerService.SetGame(newGame.Id);
 
         // 3. Обновляем статус выбора в коллекции AvailableGames
         foreach (var g in AvailableGames)
@@ -3295,6 +3402,7 @@ public partial class MainViewModel : ObservableObject
         {
             PingTargets.Add(target);
         }
+        _ = LoadCustomTargetsForActiveGameAsync();
 
         // 5. Выбираем сервер дисциплины (сохраненный или дефолтный)
         string preferredServer = cfg.GetSelectedServerForGame(newGame.Id);

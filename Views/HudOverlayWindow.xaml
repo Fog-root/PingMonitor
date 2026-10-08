@@ -74,6 +74,7 @@
             </MenuItem>
             <Separator Background="#22262C"/>
             <MenuItem Header="⚡ Оптимизация интерфейса" Click="OptimizationToggle_Click" Tag="opt_toggle"/>
+            <MenuItem x:Name="MenuAutoHideToggle" Header="  Авто-скрытие вне игры" Click="MenuAutoHideToggle_Click" Tag="auto_hide_toggle"/>
             <Separator Background="#22262C"/>
             <MenuItem x:Name="MenuLockToggle" Header="🔒 Зафиксировать (сквозные клики)" Click="ContextLock_Click" InputGestureText="Ctrl+Shift+L" Tag="lock_toggle"/>
             <MenuItem x:Name="MenuCloseToggle" Header="✕ Скрыть оверлей" Click="ContextClose_Click" InputGestureText="Ctrl+Shift+O" Tag="close_toggle"/>
@@ -160,6 +161,25 @@
                                Text="STO2"
                                Foreground="#59D499"
                                FontSize="9"
+                               FontWeight="Bold"
+                               FontFamily="Consolas, Segoe UI"/>
+                </Border>
+
+                <!-- Предупреждение о буферблоате (Bufferbloat Alert) -->
+                <Border x:Name="HudBufferbloatBadge"
+                        Visibility="Collapsed"
+                        Background="#25FFC533"
+                        BorderBrush="#FFC533"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="4,0,4,1"
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        ToolTip="Обнаружен буферблоат (задержка домашнего канала / роутера)">
+                    <TextBlock x:Name="HudBufferbloatText"
+                               Text="⚠ BLOAT"
+                               Foreground="#FFC533"
+                               FontSize="8.5"
                                FontWeight="Bold"
                                FontFamily="Consolas, Segoe UI"/>
                 </Border>
