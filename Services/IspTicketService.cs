@@ -117,10 +117,18 @@ public static class IspTicketService
         var sb = new StringBuilder();
         var now = DateTime.Now;
 
-        string contractText = !string.IsNullOrWhiteSpace(data.ContractNumber) ? data.ContractNumber : "[Укажите номер договора / лицевого счёта]";
-        string addressText = !string.IsNullOrWhiteSpace(data.ClientAddress) ? data.ClientAddress : "[Укажите адрес подключения]";
-        string phoneText = !string.IsNullOrWhiteSpace(data.ClientPhone) ? data.ClientPhone : "[Укажите контактный телефон]";
-        string routerPingStr = data.RouterPingMs >= 0 ? $"{data.RouterPingMs} мс" : "< 1 мс";
+        string contractText = !string.IsNullOrWhiteSpace(data.ContractNumber) 
+            ? data.ContractNumber 
+            : (isRussian ? "[Укажите номер договора / лицевого счёта]" : "[Specify account / contract ID]");
+        string addressText = !string.IsNullOrWhiteSpace(data.ClientAddress) 
+            ? data.ClientAddress 
+            : (isRussian ? "[Укажите адрес подключения]" : "[Specify service address]");
+        string phoneText = !string.IsNullOrWhiteSpace(data.ClientPhone) 
+            ? data.ClientPhone 
+            : (isRussian ? "[Укажите контактный телефон]" : "[Specify contact phone number]");
+        string routerPingStr = isRussian 
+            ? (data.RouterPingMs >= 0 ? $"{data.RouterPingMs} мс" : "< 1 мс")
+            : (data.RouterPingMs >= 0 ? $"{data.RouterPingMs} ms" : "< 1 ms");
 
         if (isRussian)
         {
@@ -259,20 +267,41 @@ public static class IspTicketService
             sb.AppendLine("3. The degradation starts on external provider routing hops / transit backbones.");
             sb.AppendLine();
 
+            if (data.MtrReport != null && !string.IsNullOrEmpty(data.MtrReport.VerdictTitle))
+            {
+                sb.AppendLine("ROUTE HARDWARE DIAGNOSTICS VERDICT:");
+                sb.AppendLine($"• Status:       {data.MtrReport.VerdictTitle}");
+                sb.AppendLine($"• Details:      {data.MtrReport.VerdictDescription}");
+                if (!string.IsNullOrEmpty(data.MtrReport.ProblemNodeText))
+                {
+                    sb.AppendLine($"• Failing Node: {data.MtrReport.ProblemNodeText}");
+                }
+                sb.AppendLine();
+            }
+
             if (data.MtrReport != null && data.MtrReport.Hops.Count > 0)
             {
                 sb.AppendLine("MTR HOP-BY-HOP ROUTE TRACE:");
                 sb.AppendLine(string.Format("{0,-4} | {1,-17} | {2,-24} | {3,-8} | {4,-8} | {5}",
-                    "HOP", "IP ADDRESS", "SEGMENT", "LOSS", "PING", "PTR HOSTNAME"));
+                    "HOP", "IP ADDRESS", "ROUTE SEGMENT", "LOSS", "PING", "PTR HOSTNAME"));
                 sb.AppendLine(new string('-', 90));
 
                 foreach (var hop in data.MtrReport.Hops)
                 {
+                    string categoryTitle = hop.Category switch
+                    {
+                        HopNodeCategory.LocalRouter => "Local Home Router",
+                        HopNodeCategory.IspGateway => "ISP Gateway Node",
+                        HopNodeCategory.Transit => "Transit Backbone",
+                        HopNodeCategory.Destination => "Destination Server",
+                        _ => hop.CategoryName
+                    };
+
                     string flag = hop.IsFailureNode || hop.LossPercent > 0 ? " <-- [LOSS/SPIKE]" : "";
                     sb.AppendLine(string.Format("{0,-4} | {1,-17} | {2,-24} | {3,-8} | {4,-8} | {5}{6}",
                         $"#{hop.HopIndex:D2}",
                         hop.IpAddress,
-                        hop.CategoryName,
+                        categoryTitle,
                         hop.LossDisplay,
                         hop.PingDisplay,
                         string.IsNullOrEmpty(hop.Hostname) ? "-" : hop.Hostname,
@@ -282,6 +311,26 @@ public static class IspTicketService
                 sb.AppendLine();
             }
 
+            if (data.Incidents.Count > 0)
+            {
+                sb.AppendLine("LOGGED NETWORK INCIDENTS (RECENT EVENTS):");
+                foreach (var inc in data.Incidents.Take(8))
+                {
+                    string type = inc.IsTimeout ? "TIMEOUT / PACKET LOSS" : "LATENCY SPIKE";
+                    sb.AppendLine($"• [{inc.Timestamp:HH:mm:ss}] {type}: ping {inc.PingMs} ms (server: {inc.Server})");
+                    if (!string.IsNullOrEmpty(inc.IncidentDescription))
+                    {
+                        sb.AppendLine($"    Details: {inc.IncidentDescription}");
+                    }
+                }
+                sb.AppendLine();
+            }
+
+            sb.AppendLine("REQUEST FOR ISP TECHNICAL ENGINEERS:");
+            sb.AppendLine("1. Check subscriber access switch port / ONT status for physical errors or frame drops.");
+            sb.AppendLine("2. Verify optical line attenuation levels and ethernet cable integrity.");
+            sb.AppendLine("3. Analyze upstream transit routing paths and interconnect capacity for congestion.");
+            sb.AppendLine();
             sb.AppendLine("Generated by Ping Monitoring Telemetry Suite.");
             sb.AppendLine("================================================================================");
         }

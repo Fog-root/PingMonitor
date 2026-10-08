@@ -36,4 +36,14 @@
     </None>
   </ItemGroup>
 
+  <Target Name="SyncPublishOnBuild" AfterTargets="Build">
+    <ItemGroup>
+      <_BuildOutputFiles Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_BuildOutputFiles)" 
+          DestinationFiles="@(_BuildOutputFiles->'$(MSBuildProjectDirectory)\publish\%(RecursiveDir)%(Filename)%(Extension)')" 
+          SkipUnchangedFiles="true" 
+          ContinueOnError="true" />
+  </Target>
+
 </Project>
