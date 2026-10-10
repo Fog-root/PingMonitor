@@ -1,10 +1,11 @@
 <Window x:Class="DotaPingMonitor.Views.HudOverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DotaPingMonitor.Views"
         Title="Ping Monitoring HUD"
         WindowStyle="None"
         AllowsTransparency="True"
-        Background="Transparent"
+        Background="{x:Null}"
         Topmost="True"
         ShowInTaskbar="False"
         SizeToContent="WidthAndHeight"
@@ -63,6 +64,7 @@
             <MenuItem x:Name="MenuCpuToggle" Header="✓ Нагрузка ЦП (CPU)" Click="MenuCpuToggle_Click" InputGestureText="Ctrl+Shift+C" Tag="cpu_toggle"/>
             <MenuItem x:Name="MenuGpuToggle" Header="✓ Нагрузка ГП (GPU)" Click="MenuGpuToggle_Click" InputGestureText="Ctrl+Shift+U" Tag="gpu_toggle"/>
             <MenuItem x:Name="MenuRamToggle" Header="✓ Оперативная память (ОЗУ)" Click="MenuRamToggle_Click" InputGestureText="Ctrl+Shift+R" Tag="ram_toggle"/>
+            <MenuItem x:Name="MenuGlowToggle" Header="✓ Свечение контура (Ambient Flow)" Click="MenuGlowToggle_Click" InputGestureText="Ctrl+Shift+B" Tag="glow_toggle"/>
             <MenuItem x:Name="MenuThemeSubmenu" Header="🎨 Тема оформления" Tag="theme_submenu">
                 <MenuItem Header="Linear Dark" Click="ThemeMenuItem_Click" Tag="Linear"/>
                 <MenuItem Header="Cyberpunk Neon" Click="ThemeMenuItem_Click" Tag="Cyberpunk"/>
@@ -81,7 +83,7 @@
         </ContextMenu>
     </Window.Resources>
 
-    <Grid x:Name="RootContainer" Margin="2">
+    <Grid x:Name="RootContainer" Margin="10" Background="{x:Null}">
         <!-- Векторное масштабирование окна оверлея без размытия шрифтов -->
         <Grid.LayoutTransform>
             <ScaleTransform x:Name="OverlayScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
@@ -99,6 +101,7 @@
                 RenderOptions.ClearTypeHint="Enabled"
                 TextOptions.TextFormattingMode="Display"
                 TextOptions.TextRenderingMode="ClearType"
+                Typography.NumeralAlignment="Tabular"
                 UseLayoutRounding="True"
                 SnapsToDevicePixels="True">
 
@@ -121,11 +124,14 @@
                 <!-- Значение текущего ICMP пинга -->
                 <TextBlock x:Name="PingText"
                            Text="-- ms"
+                           MinWidth="46"
+                           TextAlignment="Left"
                            Foreground="#59D499"
                            FontFamily="Segoe UI, Inter, sans-serif"
                            FontSize="13.5"
                            FontWeight="Bold"
                            VerticalAlignment="Center"
+                           Typography.NumeralAlignment="Tabular"
                            TextOptions.TextFormattingMode="Display"
                            TextOptions.TextRenderingMode="ClearType"/>
 
@@ -248,12 +254,15 @@
 
                     <TextBlock x:Name="FpsValueText"
                                Text="--"
+                               MinWidth="22"
+                               TextAlignment="Center"
                                Foreground="#FFFFFF"
                                FontFamily="Segoe UI, Inter, sans-serif"
                                FontSize="12"
                                FontWeight="SemiBold"
                                Margin="6,0,0,0"
                                VerticalAlignment="Center"
+                               Typography.NumeralAlignment="Tabular"
                                TextOptions.TextFormattingMode="Display"
                                TextOptions.TextRenderingMode="ClearType"/>
                 </StackPanel>
@@ -283,12 +292,15 @@
 
                     <TextBlock x:Name="CpuValueText"
                                Text="--%"
+                               MinWidth="32"
+                               TextAlignment="Center"
                                Foreground="#FFFFFF"
                                FontFamily="Segoe UI, Inter, sans-serif"
                                FontSize="12"
                                FontWeight="SemiBold"
                                Margin="6,0,0,0"
                                VerticalAlignment="Center"
+                               Typography.NumeralAlignment="Tabular"
                                TextOptions.TextFormattingMode="Display"
                                TextOptions.TextRenderingMode="ClearType"/>
                 </StackPanel>
@@ -318,12 +330,15 @@
 
                     <TextBlock x:Name="GpuValueText"
                                Text="--%"
+                               MinWidth="32"
+                               TextAlignment="Center"
                                Foreground="#FFFFFF"
                                FontFamily="Segoe UI, Inter, sans-serif"
                                FontSize="12"
                                FontWeight="SemiBold"
                                Margin="6,0,0,0"
                                VerticalAlignment="Center"
+                               Typography.NumeralAlignment="Tabular"
                                TextOptions.TextFormattingMode="Display"
                                TextOptions.TextRenderingMode="ClearType"/>
                 </StackPanel>
@@ -353,12 +368,15 @@
 
                     <TextBlock x:Name="RamValueText"
                                Text="--%"
+                               MinWidth="32"
+                               TextAlignment="Center"
                                Foreground="#FFFFFF"
                                FontFamily="Segoe UI, Inter, sans-serif"
                                FontSize="12"
                                FontWeight="SemiBold"
                                Margin="6,0,0,0"
                                VerticalAlignment="Center"
+                               Typography.NumeralAlignment="Tabular"
                                TextOptions.TextFormattingMode="Display"
                                TextOptions.TextRenderingMode="ClearType"/>
                 </StackPanel>
@@ -868,7 +886,7 @@
                 <Border x:Name="CyberFpsBorder" Background="#16171F" BorderBrush="#2F2B3F" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="FPS " Foreground="#FFC533" FontSize="9.5" FontWeight="Bold"/>
-                        <TextBlock x:Name="CyberFpsText" Text="--" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberFpsText" Text="--" MinWidth="22" TextAlignment="Center" Typography.NumeralAlignment="Tabular" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
                     </StackPanel>
                 </Border>
 
@@ -879,7 +897,7 @@
                 <Border x:Name="CyberCpuBorder" Background="#121720" BorderBrush="#202A3C" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="CPU " Foreground="#4299E1" FontSize="9.5" FontWeight="Bold"/>
-                        <TextBlock x:Name="CyberCpuText" Text="--%" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberCpuText" Text="--%" MinWidth="30" TextAlignment="Center" Typography.NumeralAlignment="Tabular" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
                     </StackPanel>
                 </Border>
 
@@ -890,7 +908,7 @@
                 <Border x:Name="CyberGpuBorder" Background="#161424" BorderBrush="#2F2445" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="GPU " Foreground="#BD93F9" FontSize="9.5" FontWeight="Bold"/>
-                        <TextBlock x:Name="CyberGpuText" Text="--%" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberGpuText" Text="--%" MinWidth="30" TextAlignment="Center" Typography.NumeralAlignment="Tabular" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
                     </StackPanel>
                 </Border>
 
@@ -901,7 +919,7 @@
                 <Border x:Name="CyberRamBorder" Background="#121820" BorderBrush="#1C2D35" BorderThickness="1" CornerRadius="5" Padding="6,2" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="RAM " Foreground="#2DD4BF" FontSize="9.5" FontWeight="Bold"/>
-                        <TextBlock x:Name="CyberRamText" Text="--%" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
+                        <TextBlock x:Name="CyberRamText" Text="--%" MinWidth="30" TextAlignment="Center" Typography.NumeralAlignment="Tabular" Foreground="#FFFFFF" FontSize="11.5" FontWeight="Bold"/>
                     </StackPanel>
                 </Border>
 
@@ -916,5 +934,11 @@
                 </StackPanel>
             </StackPanel>
         </Border>
+
+        <!-- Анимированная визуальная оболочка оверлея: переливающееся свечение Ambient Flow -->
+        <local:OverlayVisualEffectControl x:Name="VisualEffectOverlay"
+                                          IsHitTestVisible="False"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Stretch"/>
     </Grid>
 </Window>

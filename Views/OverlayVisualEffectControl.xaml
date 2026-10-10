@@ -1,0 +1,61 @@
+<UserControl x:Class="DotaPingMonitor.Views.OverlayVisualEffectControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             Background="Transparent"
+             IsHitTestVisible="False"
+             Focusable="False">
+
+    <UserControl.Resources>
+        <!-- Непрерывный плавный неоновый световой поток Variant 2 без темных провалов -->
+        <LinearGradientBrush x:Key="AmbientFlowBrush"
+                             StartPoint="0,0.3" EndPoint="1,0.7"
+                             SpreadMethod="Repeat"
+                             MappingMode="RelativeToBoundingBox">
+            <LinearGradientBrush.RelativeTransform>
+                <TranslateTransform x:Name="AmbientFlowTranslation" X="0" Y="0"/>
+            </LinearGradientBrush.RelativeTransform>
+            <!-- Чистая высокотехнологичная неоновая палитра:
+                 Электрический циан -> Лазурный синий -> Небесный -> Индиго -> Неоновый фиолетовый -> Пурпурный -> Электрический циан -->
+            <GradientStop Color="#00F5D4" Offset="0.00"/>
+            <GradientStop Color="#00D2FF" Offset="0.18"/>
+            <GradientStop Color="#38BDF8" Offset="0.35"/>
+            <GradientStop Color="#6366F1" Offset="0.52"/>
+            <GradientStop Color="#8B5CF6" Offset="0.70"/>
+            <GradientStop Color="#7928CA" Offset="0.86"/>
+            <GradientStop Color="#00F5D4" Offset="1.00"/>
+        </LinearGradientBrush>
+    </UserControl.Resources>
+
+    <Grid x:Name="EffectContainer" Opacity="0">
+        <!-- 1. Внешний неоновый ореол свечения (Atmospheric Ambient Halo) -->
+        <Border x:Name="HaloGlowBorder"
+                Margin="0"
+                BorderThickness="1.2"
+                CornerRadius="16"
+                BorderBrush="{StaticResource AmbientFlowBrush}"
+                Background="Transparent"
+                UseLayoutRounding="True"
+                SnapsToDevicePixels="False">
+            <Border.Effect>
+                <DropShadowEffect x:Name="HaloDropShadow"
+                                  Color="#00D2FF"
+                                  BlurRadius="12"
+                                  ShadowDepth="0"
+                                  Opacity="0.58"/>
+            </Border.Effect>
+        </Border>
+
+        <!-- 2. Кристально-четкий внутренний контурный луч (Core Perimeter Beam) -->
+        <Border x:Name="CoreContourBorder"
+                Margin="0"
+                BorderThickness="1.2"
+                CornerRadius="16"
+                BorderBrush="{StaticResource AmbientFlowBrush}"
+                Background="Transparent"
+                UseLayoutRounding="True"
+                SnapsToDevicePixels="True"/>
+    </Grid>
+</UserControl>

@@ -1198,6 +1198,7 @@
                                 <MenuItem Header="{Binding MenuCpuHeader}" Command="{Binding ToggleCpuCommand}"/>
                                 <MenuItem Header="{Binding MenuGpuHeader}" Command="{Binding ToggleGpuCommand}"/>
                                 <MenuItem Header="{Binding MenuRamHeader}" Command="{Binding ToggleRamCommand}"/>
+                                <MenuItem Header="{Binding MenuGlowHeader}" Command="{Binding ToggleGlowCommand}"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -1487,6 +1488,45 @@
                                        VerticalAlignment="Center"
                                        Cursor="Hand"
                                        MouseRightButtonDown="HkRamBorder_MouseRightButtonDown"
+                                       ToolTip="ПКМ — настроить горячую клавишу"
+                                       Margin="3,0,6,0"/>
+
+                            <!-- Тонкий микро-разделитель -->
+                            <Rectangle Width="1" Height="10"
+                                       Fill="{StaticResource BorderColor}"
+                                       Margin="0,0,6,0"
+                                       VerticalAlignment="Center"/>
+
+                            <!-- Хоткей 8: Визуальный эффект оверлея (ЛКМ — сменить режим, ПКМ — переназначить) -->
+                            <Border x:Name="HkGlowBorder"
+                                    Background="{Binding HkGlowBg}"
+                                    BorderBrush="{Binding HkGlowBorder}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="4,1"
+                                    Cursor="Hand"
+                                    MouseLeftButtonDown="HkGlowBorder_MouseLeftButtonDown"
+                                    MouseRightButtonDown="HkGlowBorder_MouseRightButtonDown"
+                                    ToolTip="{Binding LocHkGlowTooltip}">
+                                <Border.InputBindings>
+                                    <MouseBinding Gesture="LeftClick" Command="{Binding ToggleGlowCommand}"/>
+                                </Border.InputBindings>
+                                <TextBlock x:Name="HkGlowText"
+                                           Text="{Binding HkGlowText}"
+                                           Foreground="{Binding HkGlowForeground}"
+                                           FontFamily="Consolas, Segoe UI"
+                                           FontSize="10"
+                                           FontWeight="Bold"/>
+                            </Border>
+
+                            <TextBlock x:Name="HkGlowStatus"
+                                       Text="{Binding HkGlowStatusText}"
+                                       Foreground="{Binding HkGlowStatusForeground}"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Cursor="Hand"
+                                       MouseRightButtonDown="HkGlowBorder_MouseRightButtonDown"
                                        ToolTip="ПКМ — настроить горячую клавишу"
                                        Margin="3,0,0,0"/>
 

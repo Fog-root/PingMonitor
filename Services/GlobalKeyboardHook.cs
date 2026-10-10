@@ -32,6 +32,7 @@ public class GlobalKeyboardHook : IDisposable
     public HotkeyBinding CpuBinding { get; set; } = new(true, true, false, false, 0x43, "Ctrl+Shift+C");
     public HotkeyBinding GpuBinding { get; set; } = new(true, true, false, false, 0x55, "Ctrl+Shift+U");
     public HotkeyBinding RamBinding { get; set; } = new(true, true, false, false, 0x52, "Ctrl+Shift+R");
+    public HotkeyBinding GlowBinding { get; set; } = new(true, true, false, false, 0x42, "Ctrl+Shift+B");
 
     /// <summary>
     /// Флаг паузы перехвата (активен, когда открыто окно переназначения клавиш).
@@ -45,6 +46,7 @@ public class GlobalKeyboardHook : IDisposable
     public event Action? ToggleCpuRequested;
     public event Action? ToggleGpuRequested;
     public event Action? ToggleRamRequested;
+    public event Action? ToggleGlowRequested;
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
@@ -139,6 +141,10 @@ public class GlobalKeyboardHook : IDisposable
             else if (RamBinding.Matches(vkCode, ctrlDown, shiftDown, altDown, winDown))
             {
                 ToggleRamRequested?.Invoke();
+            }
+            else if (GlowBinding.Matches(vkCode, ctrlDown, shiftDown, altDown, winDown))
+            {
+                ToggleGlowRequested?.Invoke();
             }
         }
 

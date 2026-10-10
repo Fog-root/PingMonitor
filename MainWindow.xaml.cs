@@ -348,6 +348,18 @@ public partial class MainWindow : Window
         OpenRebindDialog("ram", LocalizationService.IsRussian ? "Оперативная память (RAM) в HUD" : "RAM usage in HUD");
     }
 
+    private void HkGlowBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        _viewModel.ToggleGlow();
+    }
+
+    private void HkGlowBorder_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        OpenRebindDialog("glow", LocalizationService.IsRussian ? "Визуальный эффект в HUD" : "HUD visual effect");
+    }
+
     private void OpenRebindDialog(string hotkeyId, string actionTitle)
     {
         var current = hotkeyId switch
@@ -359,6 +371,7 @@ public partial class MainWindow : Window
             "cpu" => _viewModel.CpuBinding,
             "gpu" => _viewModel.GpuBinding,
             "ram" => _viewModel.RamBinding,
+            "glow" => _viewModel.GlowBinding,
             _ => _viewModel.OverlayBinding
         };
 

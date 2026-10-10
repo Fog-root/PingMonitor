@@ -40,9 +40,11 @@ public partial class HudOverlayWindow : Window
     // Win32 API Constants & Functions
     // =========================================================
 
+    private const int GWL_STYLE = -16;
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TRANSPARENT = 0x00000020;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
+    private const int WS_MAXIMIZEBOX = 0x00010000;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
@@ -73,6 +75,20 @@ public partial class HudOverlayWindow : Window
 
         SetScale(_config.Scale);
         RestoreWindowPosition();
+
+        var initialPreset = string.IsNullOrWhiteSpace(_config.LayoutPreset) ? "classic_bar" : _config.LayoutPreset;
+        var initialCr = initialPreset.ToLowerInvariant() switch
+        {
+            "vertical_stack" => new CornerRadius(10),
+            "net_graph" => new CornerRadius(6),
+            "cyber_hud" => new CornerRadius(8),
+            _ => new CornerRadius(16)
+        };
+        if (VisualEffectOverlay != null)
+        {
+            VisualEffectOverlay.CornerRadius = initialCr;
+            VisualEffectOverlay.UpdateBordersCornerRadius(initialCr);
+        }
         ThemeService.ThemeChanged += OnThemeChanged;
         _onOptimizationModeChanged = _ =>
         {
@@ -91,16 +107,26 @@ public partial class HudOverlayWindow : Window
         MouseEnter += (_, _) => SetHovered(true);
         MouseLeave += (_, _) => SetHovered(false);
 
+        StateChanged += (_, _) =>
+        {
+            if (WindowState == WindowState.Maximized)
+            {
+                WindowState = WindowState.Normal;
+            }
+        };
+
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible)
             {
                 _hoverTimer.Start();
+                UpdateGlowVisibility();
             }
             else
             {
                 _hoverTimer.Stop();
                 SetHovered(false, immediate: true);
+                VisualEffectOverlay?.Deactivate(animated: false);
             }
         };
 
@@ -117,6 +143,7 @@ public partial class HudOverlayWindow : Window
             UpdateCpuVisibility();
             UpdateGpuVisibility();
             UpdateRamVisibility();
+            UpdateGlowVisibility();
             UpdateContextMenuHotkeys();
             UpdateContextMenuLocalization();
             OnThemeChanged(ThemeService.Current);
@@ -232,19 +259,19 @@ public partial class HudOverlayWindow : Window
         double vWidth = SystemParameters.VirtualScreenWidth;
         double vHeight = SystemParameters.VirtualScreenHeight;
 
-        // Проверяем, попадают ли сохраненные координаты в границы активных мониторов
-        if (_config.Left >= vLeft && _config.Left < vLeft + vWidth - 50 &&
-            _config.Top >= vTop && _config.Top < vTop + vHeight - 30)
+        // Если сохраненные координаты некорректны (например, залипание в 0 или за экраном), сбрасываем в комфортное положение
+        if (_config.Left < 20 || _config.Top < 20 || _config.Left > vLeft + vWidth - 100 || _config.Top > vTop + vHeight - 80)
         {
-            Left = _config.Left;
-            Top = _config.Top;
+            Left = Math.Max(40, SystemParameters.PrimaryScreenWidth - 440);
+            Top = 60;
+            _config.Left = Left;
+            _config.Top = Top;
+            SaveConfig();
+            return;
         }
-        else
-        {
-            // По умолчанию: правый верхний угол с отступом
-            Left = Math.Max(40, SystemParameters.PrimaryScreenWidth - 240);
-            Top = 40;
-        }
+
+        Left = _config.Left;
+        Top = _config.Top;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -257,6 +284,10 @@ public partial class HudOverlayWindow : Window
         int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
         SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
 
+        // Запрещаем максимизацию окна оверлея в Windows (убираем WS_MAXIMIZEBOX)
+        int style = GetWindowLong(hwnd, GWL_STYLE);
+        SetWindowLong(hwnd, GWL_STYLE, style & ~WS_MAXIMIZEBOX);
+
         // Применяем сохраненное состояние фиксации
         SetLocked(_config.IsLocked);
     }
@@ -264,6 +295,7 @@ public partial class HudOverlayWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _hoverTimer.Stop();
+        VisualEffectOverlay?.Deactivate(animated: false);
         ThemeService.ThemeChanged -= OnThemeChanged;
         ThemeService.OptimizationModeChanged -= _onOptimizationModeChanged;
         LocalizationService.LanguageChanged -= OnOverlayLanguageChanged;
@@ -1195,6 +1227,71 @@ public partial class HudOverlayWindow : Window
         }
     }
 
+    public bool IsGlowEnabled => _config.ShowGlowEffect;
+
+    public OverlayVisualEffectStyle CurrentGlowStyle =>
+        Enum.TryParse<OverlayVisualEffectStyle>(_config.GlowStyle, true, out var s) ? s : OverlayVisualEffectStyle.AmbientFlow;
+
+    /// <summary>
+    /// Переключение свечения контура (Ambient Flow) одной кнопкой (вкл/выкл).
+    /// </summary>
+    public void ToggleGlow()
+    {
+        SetGlowEnabled(!_config.ShowGlowEffect);
+    }
+
+    public void SetGlowEnabled(bool enabled)
+    {
+        _config.ShowGlowEffect = enabled;
+        UpdateGlowVisibility();
+        SaveConfig();
+        StateChangedNotification?.Invoke(IsVisible);
+    }
+
+    public void SetGlowStyle(OverlayVisualEffectStyle style, bool enabled = true)
+    {
+        _config.GlowStyle = style.ToString();
+        _config.ShowGlowEffect = enabled;
+        UpdateGlowVisibility();
+        SaveConfig();
+        StateChangedNotification?.Invoke(IsVisible);
+    }
+
+    private void MenuGlowToggle_Click(object sender, RoutedEventArgs e)
+    {
+        ToggleGlow();
+    }
+
+    public void UpdateGlowVisibility()
+    {
+        bool isMinimal = string.Equals(_config.LayoutPreset, "minimal", StringComparison.OrdinalIgnoreCase);
+        bool shouldActivate = _config.ShowGlowEffect && !ThemeService.IsOptimizedMode && !isMinimal && IsVisible;
+
+        if (VisualEffectOverlay != null)
+        {
+            if (shouldActivate)
+            {
+                VisualEffectOverlay.Activate(true);
+            }
+            else
+            {
+                VisualEffectOverlay.Deactivate(true);
+            }
+        }
+
+        var cm = GetContextMenu();
+        if (cm != null)
+        {
+            var mi = FindMenuItemByTag(cm.Items, "glow_toggle");
+            if (mi != null)
+            {
+                string title = LocalizationService.Get("GlowMenu");
+                if (string.IsNullOrEmpty(title)) title = "Свечение контура (Ambient Flow)";
+                mi.Header = _config.ShowGlowEffect ? $"✓ {title}" : $"  {title}";
+            }
+        }
+    }
+
     public void UpdateRam(int ramPercent, double usedGb = 0, double totalGb = 0)
     {
         _lastRam = ramPercent;
@@ -1279,6 +1376,8 @@ public partial class HudOverlayWindow : Window
         };
     }
 
+
+
     // =========================================================
     // Пресеты вида и настройка прозрачности оверлея
     // =========================================================
@@ -1333,6 +1432,19 @@ public partial class HudOverlayWindow : Window
         UpdateCpuVisibility();
         UpdateGpuVisibility();
         UpdateRamVisibility();
+        var cr = presetId.ToLowerInvariant() switch
+        {
+            "vertical_stack" => new CornerRadius(10),
+            "net_graph" => new CornerRadius(6),
+            "cyber_hud" => new CornerRadius(8),
+            _ => new CornerRadius(16)
+        };
+        if (VisualEffectOverlay != null)
+        {
+            VisualEffectOverlay.CornerRadius = cr;
+            VisualEffectOverlay.UpdateBordersCornerRadius(cr);
+        }
+        UpdateGlowVisibility();
         UpdateMatchStatus(_isInMatch, _matchClusterCode, string.Empty);
     }
 
@@ -1575,6 +1687,7 @@ public partial class HudOverlayWindow : Window
         UpdateCpuVisibility();
         UpdateGpuVisibility();
         UpdateRamVisibility();
+        UpdateGlowVisibility();
     }
 
     private void OnOverlayLanguageChanged(string lang)
@@ -1831,6 +1944,19 @@ public partial class HudOverlayWindow : Window
             }
 
             UpdateThemeMenuChecks();
+            var activeCr = CurrentPresetId.ToLowerInvariant() switch
+            {
+                "vertical_stack" => ThemeService.IsOptimizedMode ? new CornerRadius(3) : new CornerRadius(10),
+                "net_graph" => ThemeService.IsOptimizedMode ? new CornerRadius(2) : new CornerRadius(6),
+                "cyber_hud" => ThemeService.IsOptimizedMode ? new CornerRadius(3) : new CornerRadius(8),
+                _ => ThemeService.IsOptimizedMode ? new CornerRadius(3) : new CornerRadius(16)
+            };
+            if (VisualEffectOverlay != null)
+            {
+                VisualEffectOverlay.CornerRadius = activeCr;
+                VisualEffectOverlay.UpdateBordersCornerRadius(activeCr);
+            }
+            UpdateGlowVisibility();
         }
         catch
         {
@@ -2108,6 +2234,16 @@ public partial class HudOverlayWindow : Window
     {
         if (!_isLocked)
         {
+            var activeBorder = GetActiveLayoutBorder();
+            if (activeBorder != null && activeBorder.IsVisible)
+            {
+                Point pt = e.GetPosition(activeBorder);
+                if (pt.X < -2 || pt.Y < -2 || pt.X > activeBorder.ActualWidth + 2 || pt.Y > activeBorder.ActualHeight + 2)
+                {
+                    return;
+                }
+            }
+
             _isDragging = true;
             try
             {
@@ -2142,6 +2278,7 @@ public partial class HudOverlayWindow : Window
         _config = cfg;
         SetPreset(_config.LayoutPreset);
         SetBaseOpacity(_config.BaseOpacity);
+        UpdateGlowVisibility();
         UpdateContextMenuHotkeys();
         UpdateOptimizationMenuHeader();
     }
@@ -2183,6 +2320,10 @@ public partial class HudOverlayWindow : Window
                 {
                     mi.InputGestureText = _config.HotkeyRam.DisplayText;
                 }
+                else if (tag.Equals("glow_toggle", StringComparison.OrdinalIgnoreCase) && _config.HotkeyGlow != null)
+                {
+                    mi.InputGestureText = _config.HotkeyGlow.DisplayText;
+                }
             }
         }
     }
@@ -2211,6 +2352,11 @@ public partial class HudOverlayWindow : Window
         diskCfg.ShowCpu = _config.ShowCpu;
         diskCfg.ShowGpu = _config.ShowGpu;
         diskCfg.ShowRam = _config.ShowRam;
+        diskCfg.ShowGlowEffect = _config.ShowGlowEffect;
+        if (!string.IsNullOrEmpty(_config.GlowStyle))
+        {
+            diskCfg.GlowStyle = _config.GlowStyle;
+        }
         if (!string.IsNullOrEmpty(_config.Theme))
         {
             diskCfg.Theme = _config.Theme;
@@ -2223,6 +2369,8 @@ public partial class HudOverlayWindow : Window
         if (_config.HotkeyFps != null) diskCfg.HotkeyFps = _config.HotkeyFps;
         if (_config.HotkeyCpu != null) diskCfg.HotkeyCpu = _config.HotkeyCpu;
         if (_config.HotkeyGpu != null) diskCfg.HotkeyGpu = _config.HotkeyGpu;
+        if (_config.HotkeyRam != null) diskCfg.HotkeyRam = _config.HotkeyRam;
+        if (_config.HotkeyGlow != null) diskCfg.HotkeyGlow = _config.HotkeyGlow;
 
         _config = diskCfg;
         _configService.Save(_config);

@@ -500,6 +500,24 @@ public partial class MainViewModel : ObservableObject
     private string _menuRamHeader = "✓ Оперативная память (Ctrl+Shift+R)";
 
     [ObservableProperty]
+    private string _hkGlowStatusText = "свеч";
+
+    [ObservableProperty]
+    private Brush _hkGlowBg = Brushes.Transparent;
+
+    [ObservableProperty]
+    private Brush _hkGlowBorder = Brushes.Transparent;
+
+    [ObservableProperty]
+    private Brush _hkGlowForeground = Brushes.Transparent;
+
+    [ObservableProperty]
+    private Brush _hkGlowStatusForeground = Brushes.Transparent;
+
+    [ObservableProperty]
+    private string _menuGlowHeader = "✓ Свечение контура (Ctrl+Shift+B)";
+
+    [ObservableProperty]
     private string _hkOverlayText = "Ctrl+Shift+O";
 
     [ObservableProperty]
@@ -520,6 +538,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _hkRamText = "Ctrl+Shift+R";
 
+    [ObservableProperty]
+    private string _hkGlowText = "Ctrl+Shift+B";
+
     public HotkeyBinding OverlayBinding => _keyboardHook.OverlayBinding;
     public HotkeyBinding LockBinding => _keyboardHook.LockBinding;
     public HotkeyBinding SparklineBinding => _keyboardHook.SparklineBinding;
@@ -527,6 +548,7 @@ public partial class MainViewModel : ObservableObject
     public HotkeyBinding CpuBinding => _keyboardHook.CpuBinding;
     public HotkeyBinding GpuBinding => _keyboardHook.GpuBinding;
     public HotkeyBinding RamBinding => _keyboardHook.RamBinding;
+    public HotkeyBinding GlowBinding => _keyboardHook.GlowBinding;
 
     public void SetKeyboardHookPaused(bool isPaused)
     {
@@ -544,6 +566,7 @@ public partial class MainViewModel : ObservableObject
             "cpu" => new HotkeyBinding(true, true, false, false, 0x43, "Ctrl+Shift+C"),
             "gpu" => new HotkeyBinding(true, true, false, false, 0x55, "Ctrl+Shift+U"),
             "ram" => new HotkeyBinding(true, true, false, false, 0x52, "Ctrl+Shift+R"),
+            "glow" => new HotkeyBinding(true, true, false, false, 0x42, "Ctrl+Shift+B"),
             _ => new HotkeyBinding(true, true, false, false, 0x4F, "Ctrl+Shift+O")
         };
     }
@@ -594,6 +617,12 @@ public partial class MainViewModel : ObservableObject
                 cfg.HotkeyRam = newBinding;
                 MenuRamHeader = $"{(cfg.ShowRam ? "✓" : " ")} {LocalizationService.Get("RamMenu")} ({newBinding.DisplayText})";
                 break;
+            case "glow":
+                _keyboardHook.GlowBinding = newBinding;
+                HkGlowText = newBinding.DisplayText;
+                cfg.HotkeyGlow = newBinding;
+                MenuGlowHeader = $"{(cfg.ShowGlowEffect ? "✓" : " ")} {LocalizationService.Get("GlowMenu")} ({newBinding.DisplayText})";
+                break;
         }
 
         // Синхронизируем все активные бинды в конфигурацию
@@ -604,6 +633,7 @@ public partial class MainViewModel : ObservableObject
         cfg.HotkeyCpu = _keyboardHook.CpuBinding;
         cfg.HotkeyGpu = _keyboardHook.GpuBinding;
         cfg.HotkeyRam = _keyboardHook.RamBinding;
+        cfg.HotkeyGlow = _keyboardHook.GlowBinding;
 
         _overlayConfigService.Save(cfg);
         _overlayWindow?.SyncConfig(cfg);
@@ -725,6 +755,12 @@ public partial class MainViewModel : ObservableObject
             HkRamText = initialCfg.HotkeyRam.DisplayText;
             MenuRamHeader = $"{(initialCfg.ShowRam ? "✓" : " ")} {LocalizationService.Get("RamMenu")} ({initialCfg.HotkeyRam.DisplayText})";
         }
+        if (initialCfg.HotkeyGlow != null)
+        {
+            _keyboardHook.GlowBinding = initialCfg.HotkeyGlow;
+            HkGlowText = initialCfg.HotkeyGlow.DisplayText;
+            MenuGlowHeader = $"{(initialCfg.ShowGlowEffect ? "✓" : " ")} {LocalizationService.Get("GlowMenu")} ({initialCfg.HotkeyGlow.DisplayText})";
+        }
 
         // 2. Заполняем темы
         foreach (var theme in ThemeService.Themes)
@@ -793,6 +829,7 @@ public partial class MainViewModel : ObservableObject
         _keyboardHook.ToggleCpuRequested += () => Dispatch(() => ToggleCpu());
         _keyboardHook.ToggleGpuRequested += () => Dispatch(() => ToggleGpu());
         _keyboardHook.ToggleRamRequested += () => Dispatch(() => ToggleRam());
+        _keyboardHook.ToggleGlowRequested += () => Dispatch(() => ToggleGlow());
 
         // 5. FPS, CPU, GPU и RAM сервисы
         _fpsService.FpsUpdated += fps =>
@@ -1171,6 +1208,11 @@ public partial class MainViewModel : ObservableObject
     public string LocAddCustomServerTooltip => LocalizationService.IsRussian ? "Добавить свой сервер (IP / Домен)" : "Add custom target (IP / Domain)";
     public string LocDeleteCustomServerTooltip => LocalizationService.IsRussian ? "Удалить этот сервер" : "Delete this custom server";
 
+    public string LocGlowAmbient => LocalizationService.Get("GlowMenuAmbient");
+    public string LocGlowDota => LocalizationService.Get("GlowMenuDota");
+    public string LocGlowOff => LocalizationService.Get("GlowMenuOff");
+    public string LocHkGlowTooltip => LocalizationService.Get("HkGlowTooltip");
+
     public string LocSpeedtestStart => LocalizationService.Get("SpeedtestStart");
     public string LocSpeedtestCancel => LocalizationService.Get("SpeedtestCancel");
     public string LocSpeedtestTesting => LocalizationService.Get("SpeedtestTesting");
@@ -1294,6 +1336,10 @@ public partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(LocColStatus));
             OnPropertyChanged(nameof(LocColServer));
             OnPropertyChanged(nameof(LocHotkeyHint));
+            OnPropertyChanged(nameof(LocGlowAmbient));
+            OnPropertyChanged(nameof(LocGlowDota));
+            OnPropertyChanged(nameof(LocGlowOff));
+            OnPropertyChanged(nameof(LocHkGlowTooltip));
             OnPropertyChanged(nameof(LocNavSections));
             OnPropertyChanged(nameof(LocNavPingDesc));
             OnPropertyChanged(nameof(LocNavTmTitle));
@@ -2675,6 +2721,14 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void ToggleGlow()
+    {
+        EnsureOverlayCreated();
+        _overlayWindow?.ToggleGlow();
+        UpdateOverlayButtonState();
+    }
+
+    [RelayCommand]
     public void SetScalePreset(object? parameter)
     {
         if (parameter is double scale || (parameter is string str && double.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out scale)))
@@ -3012,10 +3066,15 @@ public partial class MainViewModel : ObservableObject
         bool isRamOn = _overlayWindow != null
             ? _overlayWindow.IsRamVisible
             : cfg.ShowRam;
+        bool isGlowOn = _overlayWindow != null
+            ? _overlayWindow.IsGlowEnabled
+            : cfg.ShowGlowEffect;
 
         var theme = ThemeService.Current;
         var greenBrush = CreateBrush(theme.AccentGreen);
         var greenSoftBg = CreateBrush(theme.AccentGreenSoft);
+        var cyanBrush = CreateBrush(theme.AccentBlue ?? "#00D2FF");
+        var cyanSoftBg = CreateBrush(theme.AccentBlueSoft ?? "#1800D2FF");
         var grayBrush = CreateBrush(theme.TextSecondary);
         var grayMuted = CreateBrush(theme.TextMuted);
         var grayBg = CreateBrush(theme.BgCardElevated);
@@ -3175,6 +3234,26 @@ public partial class MainViewModel : ObservableObject
             HkRamForeground = grayBrush;
             HkRamStatusText = LocalizationService.Get("HkOverlayOff");
             HkRamStatusForeground = grayMuted;
+        }
+
+        // 8. Статус Свечение контура (Ambient Flow)
+        if (isGlowOn)
+        {
+            HkGlowBg = cyanSoftBg;
+            HkGlowBorder = cyanSoftBg;
+            HkGlowForeground = cyanBrush;
+            HkGlowStatusText = LocalizationService.Get("HkGlowAmbient");
+            HkGlowStatusForeground = cyanBrush;
+            MenuGlowHeader = $"✓ {LocalizationService.Get("GlowMenu")} ({HkGlowText})";
+        }
+        else
+        {
+            HkGlowBg = grayBg;
+            HkGlowBorder = grayBorder;
+            HkGlowForeground = grayBrush;
+            HkGlowStatusText = LocalizationService.Get("HkOverlayOff");
+            HkGlowStatusForeground = grayMuted;
+            MenuGlowHeader = $"{LocalizationService.Get("GlowMenu")} ({HkGlowText})";
         }
 
         // Управление сервисом FPS (запускаем когда оверлей активен и FPS включен, либо активно авто-скрытие)

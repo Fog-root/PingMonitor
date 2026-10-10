@@ -28,6 +28,10 @@ public class OverlayConfig
 
     public bool ShowRam { get; set; } = true;
 
+    public bool ShowGlowEffect { get; set; } = true;
+
+    public string GlowStyle { get; set; } = "AmbientFlow";
+
     public string Theme { get; set; } = "Linear";
 
     public bool IsOptimizedMode { get; set; } = false;
@@ -107,4 +111,6 @@ public class OverlayConfig
     public HotkeyBinding HotkeyGpu { get; set; } = new(true, true, false, false, 0x55, "Ctrl+Shift+U");
  
     public HotkeyBinding HotkeyRam { get; set; } = new(true, true, false, false, 0x52, "Ctrl+Shift+R");
+
+    public HotkeyBinding HotkeyGlow { get; set; } = new(true, true, false, false, 0x42, "Ctrl+Shift+B");
 }
