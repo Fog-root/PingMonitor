@@ -20,6 +20,7 @@ AppVerName={#MyAppName} v{#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
+DisableDirPage=no
 DisableProgramGroupPage=yes
 ; Требуются права администратора для установки в Program Files и установки .NET 8 Runtime
 PrivilegesRequired=admin
